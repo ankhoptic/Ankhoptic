@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 
 export default function AnnouncementBar() {
   const [messages, setMessages] = useState<string[]>([]);
@@ -16,59 +15,49 @@ export default function AnnouncementBar() {
           setMessages(d.announcement_messages);
         }
       })
-      .catch(() => {
-        /* keep defaults */
-      });
+      .catch(() => {});
   }, []);
 
   if (messages.length === 0) return null;
 
-  // We need enough copies so that half the strip is wider than the screen.
-  // 10 copies of the whole array is generally more than enough to cover ultra-wide monitors.
+  // Repeat enough times to fill screen seamlessly
   const repeated: string[] = [];
-  for (let i = 0; i < 15; i++) {
+  for (let i = 0; i < 10; i++) {
     repeated.push(...messages);
   }
-
-  // Double the array so we can translate exactly -50% to create a seamless infinite loop
+  // Double for seamless loop (translate -50%)
   const seamlessArray = [...repeated, ...repeated];
 
+  const duration = messages.length * 30; // ~30s per message
+
   return (
-    <div
-      className="announcement-bar bg_dark"
-      style={{ overflow: "hidden", whiteSpace: "nowrap" }}
-    >
-      <motion.div
-        className="wrap-announcement-bar"
-        style={{ display: "inline-flex", width: "max-content" }}
-        animate={{
-          x: ["0%", "-50%"],
-        }}
-        transition={{
-          repeat: Infinity,
-          ease: "linear",
-          duration: repeated.length * 1000, // Much slower speed
-        }}
-      >
-        {/* We keep the original class `box-sw-announcement-bar` so it gets the template's spacing/gaps natively */}
-        <div
-          className="box-sw-announcement-bar"
-          style={{
-            display: "flex",
-            flexShrink: 0,
-            gap: "40px",
-            alignItems: "center",
-            animation: "none", // Override global CSS animation that overrides Framer Motion
-          }}
-        >
-          {seamlessArray.map((msg, i) => (
-            <div key={`msg-${i}`} className="announcement-bar-item">
-              <p>{msg}</p>
-            </div>
-          ))}
+    <>
+      <style>{`
+        @keyframes marquee-scroll {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .marquee-track {
+          display: inline-flex;
+          width: max-content;
+          animation: marquee-scroll ${duration}s linear infinite;
+        }
+        .marquee-track:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
+      <div className="announcement-bar bg_dark" style={{ overflow: "hidden", whiteSpace: "nowrap" }}>
+        <div className="wrap-announcement-bar" style={{ overflow: "hidden" }}>
+          <div className="marquee-track">
+            {seamlessArray.map((msg, i) => (
+              <div key={i} className="announcement-bar-item">
+                <p>{msg}</p>
+              </div>
+            ))}
+          </div>
         </div>
-      </motion.div>
-      <span className="icon-close close-announcement-bar"></span>
-    </div>
+        <span className="icon-close close-announcement-bar"></span>
+      </div>
+    </>
   );
 }
