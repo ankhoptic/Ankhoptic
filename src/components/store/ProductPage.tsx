@@ -113,15 +113,25 @@ export default function ProductPage({ slug }: { slug: string }) {
 
   const images = product.images.length > 0 ? product.images : [PLACEHOLDER];
 
-  // Options
+  // Options — Order: minus (most negative first) → 0.00 Plain → plus (ascending)
   const plainOption = {
     id: "plain",
     value: "0.00",
     label: "0.00 Plain (Normal Eye)",
   };
+  const nonPlainOptions = (product.powerOptions || []).filter(
+    (p) => p.value !== "0.00"
+  );
+  const minusOptions = nonPlainOptions
+    .filter((p) => parseFloat(p.value) < 0)
+    .sort((a, b) => parseFloat(a.value) - parseFloat(b.value));
+  const plusOptions = nonPlainOptions
+    .filter((p) => parseFloat(p.value) > 0)
+    .sort((a, b) => parseFloat(a.value) - parseFloat(b.value));
   const powerDropdownOptions: PowerOption[] = [
+    ...minusOptions,
     plainOption,
-    ...(product.powerOptions || []).filter((p) => p.value !== "0.00"),
+    ...plusOptions,
   ];
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

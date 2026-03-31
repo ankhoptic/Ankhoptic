@@ -141,15 +141,24 @@ export default function QuickAdd() {
   };
   // ─────────────────────────────────────────────────────────
 
-  // Build the dropdown options — always start with 0.00 Plain
+  // Build the dropdown options:
+  // Order: minus powers (most negative first) → 0.00 Plain → plus powers (ascending)
   const plainOption = {
     id: "plain",
     value: "0.00",
     label: "0.00 Plain (Normal Eye)",
   };
+  const nonPlainOptions = powerOptions.filter((p) => p.value !== "0.00");
+  const minusOptions = nonPlainOptions
+    .filter((p) => parseFloat(p.value) < 0)
+    .sort((a, b) => parseFloat(a.value) - parseFloat(b.value)); // most negative first
+  const plusOptions = nonPlainOptions
+    .filter((p) => parseFloat(p.value) > 0)
+    .sort((a, b) => parseFloat(a.value) - parseFloat(b.value)); // lowest positive first
   const powerDropdownOptions: PowerOption[] = [
+    ...minusOptions,
     plainOption,
-    ...powerOptions.filter((p) => p.value !== "0.00"),
+    ...plusOptions,
   ];
 
   return (

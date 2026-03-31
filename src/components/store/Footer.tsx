@@ -101,7 +101,9 @@ export default function Footer() {
                   <ul className="tf-social-icon d-flex gap-10">
                     <li>
                       <Link
-                        href="#"
+                        href="https://www.facebook.com/share/18Zzcu3XBA/"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="box-icon w_34 round social-facebook social-line"
                       >
                         <i className="icon fs-14 icon-fb" />
@@ -109,15 +111,9 @@ export default function Footer() {
                     </li>
                     <li>
                       <Link
-                        href="#"
-                        className="box-icon w_34 round social-twiter social-line"
-                      >
-                        <i className="icon fs-12 icon-Icon-x" />
-                      </Link>
-                    </li>
-                    <li>
-                      <Link
-                        href="#"
+                        href="https://www.instagram.com/ankhoptics?igsh=djF6NzZubTdnd3Y5"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="box-icon w_34 round social-instagram social-line"
                       >
                         <i className="icon fs-14 icon-instagram" />
@@ -125,18 +121,12 @@ export default function Footer() {
                     </li>
                     <li>
                       <Link
-                        href="#"
+                        href="https://www.tiktok.com/@ankhoptic?_r=1&_t=ZS-959V5eSAfcD"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="box-icon w_34 round social-tiktok social-line"
                       >
                         <i className="icon fs-14 icon-tiktok" />
-                      </Link>
-                    </li>
-                    <li>
-                      <Link
-                        href="#"
-                        className="box-icon w_34 round social-pinterest social-line"
-                      >
-                        <i className="icon fs-14 icon-pinterest-1" />
                       </Link>
                     </li>
                   </ul>
