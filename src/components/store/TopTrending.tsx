@@ -119,19 +119,25 @@ function ProductCard({ p }: { p: Product }) {
 
 export default function TopTrending() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [hasMore, setHasMore] = useState(false);
 
   useEffect(() => {
-    fetch("/api/store/products?limit=8")
+    fetch("/api/store/products?limit=13")
       .then((r) => r.json())
-      .then((data) =>
-        setProducts(Array.isArray(data.products) ? data.products : []),
-      )
+      .then((data) => {
+        const list = Array.isArray(data.products) ? data.products : [];
+        if (list.length > 12) {
+          setHasMore(true);
+          setProducts(list.slice(0, 12));
+        } else {
+          setHasMore(false);
+          setProducts(list);
+        }
+      })
       .catch(console.error);
   }, []);
 
   if (products.length === 0) return null;
-
-  const [first, ...rest] = products;
 
   return (
     <section className="flat-spacing-5">
@@ -147,13 +153,31 @@ export default function TopTrending() {
           <div className="tab-content">
             <div className="tab-pane active show" id="trending" role="tabpanel">
               <div className="tf-grid-layout tf-col-2 md-col-3 lg-col-4 xl-col-4">
-                <ProductCard p={first} />
-                {rest.map((p) => (
+                {products.map((p) => (
                   <ProductCard key={p.id} p={p} />
                 ))}
               </div>
             </div>
           </div>
+          {hasMore && (
+            <div className="tf-pagination-wrap view-more-button text-center mt-5">
+              <Link
+                href="/shop"
+                className="tf-btn-loading style-2 btn-loadmore fw-6 block"
+                style={{
+                  padding: "14px 34px",
+                  borderRadius: "4px",
+                  backgroundColor: "#020042",
+                  color: "#fff",
+                  display: "inline-block",
+                  letterSpacing: "1px",
+                  textTransform: "uppercase"
+                }}
+              >
+                <span className="text">View All Products</span>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </section>

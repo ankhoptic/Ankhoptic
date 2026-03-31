@@ -36,7 +36,6 @@ type Product = {
 };
 
 function ProductsPageContent() {
-
   const [tab, setTab] = useState("All");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
@@ -73,7 +72,10 @@ function ProductsPageContent() {
       s.includes(id) ? s.filter((x) => x !== id) : [...s, id],
     );
 
-  const reload = () => { setRefresh((r) => r + 1); setSelected([]); };
+  const reload = () => {
+    setRefresh((r) => r + 1);
+    setSelected([]);
+  };
 
   const bulkSetStatus = async (status: "ACTIVE" | "DRAFT") => {
     await Promise.all(
@@ -82,8 +84,8 @@ function ProductsPageContent() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status }),
-        })
-      )
+        }),
+      ),
     );
     reload();
   };
@@ -95,9 +97,7 @@ function ProductsPageContent() {
   const doDelete = async () => {
     setConfirmOpen(false);
     await Promise.all(
-      selected.map((id) =>
-        fetch(`/api/products/${id}`, { method: "DELETE" })
-      )
+      selected.map((id) => fetch(`/api/products/${id}`, { method: "DELETE" })),
     );
     reload();
   };
@@ -115,15 +115,19 @@ function ProductsPageContent() {
     <Box bg={T.bg} minH="100%" p={{ base: 4, md: 6 }}>
       <PageHeader title="Products" subtitle={`${total} products total`}>
         <AdminButton variant="secondary">Export</AdminButton>
-        <NextLink href="/admin/products/bulk-upload">
+        {/* <NextLink href="/admin/products/bulk-upload">
           <AdminButton variant="secondary">Bulk Upload</AdminButton>
-        </NextLink>
+        </NextLink> */}
         <NextLink href="/admin/products/new">
           <AdminButton variant="primary">Add product</AdminButton>
         </NextLink>
       </PageHeader>
 
-      <Grid templateColumns={{ base: "repeat(2,1fr)", md: "repeat(4,1fr)" }} gap={4} mb={5}>
+      <Grid
+        templateColumns={{ base: "repeat(2,1fr)", md: "repeat(4,1fr)" }}
+        gap={4}
+        mb={5}
+      >
         <StatCard label="Total Products" value={total} />
         <StatCard
           label="Active"
@@ -163,9 +167,22 @@ function ProductsPageContent() {
               count={selected.length}
               onClear={() => setSelected([])}
               actions={[
-                { label: "Set as active", icon: "active", onClick: () => bulkSetStatus("ACTIVE") },
-                { label: "Set as draft",  icon: "draft",  onClick: () => bulkSetStatus("DRAFT")  },
-                { label: "Delete",        icon: "delete", danger: true, onClick: bulkDelete       },
+                {
+                  label: "Set as active",
+                  icon: "active",
+                  onClick: () => bulkSetStatus("ACTIVE"),
+                },
+                {
+                  label: "Set as draft",
+                  icon: "draft",
+                  onClick: () => bulkSetStatus("DRAFT"),
+                },
+                {
+                  label: "Delete",
+                  icon: "delete",
+                  danger: true,
+                  onClick: bulkDelete,
+                },
               ]}
             />
           </>
@@ -204,9 +221,13 @@ function ProductsPageContent() {
                 <TD>
                   <Flex align="center" gap={3}>
                     <Box
-                      w="40px" h="40px" borderRadius="8px"
-                      overflow="hidden" flexShrink={0}
-                      bg={T.bg} border={`1px solid ${T.border}`}
+                      w="40px"
+                      h="40px"
+                      borderRadius="8px"
+                      overflow="hidden"
+                      flexShrink={0}
+                      bg={T.bg}
+                      border={`1px solid ${T.border}`}
                       position="relative"
                     >
                       {p.images?.[0] ? (
@@ -224,7 +245,12 @@ function ProductsPageContent() {
                       )}
                     </Box>
                     <Box>
-                      <Text fontSize="13.5px" fontWeight={600} color={T.text} lineHeight={1.3}>
+                      <Text
+                        fontSize="13.5px"
+                        fontWeight={600}
+                        color={T.text}
+                        lineHeight={1.3}
+                      >
                         {p.title}
                       </Text>
                       <Text fontSize="11.5px" color={T.sub} mt="1px">
@@ -264,7 +290,12 @@ function ProductsPageContent() {
                       Rs {p.price.toLocaleString()}
                     </Text>
                     {p.comparePrice && p.comparePrice > p.price && (
-                      <Text fontSize="11.5px" color={T.sub} textDecoration="line-through" mt="1px">
+                      <Text
+                        fontSize="11.5px"
+                        color={T.sub}
+                        textDecoration="line-through"
+                        mt="1px"
+                      >
                         Rs {p.comparePrice.toLocaleString()}
                       </Text>
                     )}

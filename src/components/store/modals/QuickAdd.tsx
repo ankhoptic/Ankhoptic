@@ -151,7 +151,7 @@ export default function QuickAdd() {
   const nonPlainOptions = powerOptions.filter((p) => p.value !== "0.00");
   const minusOptions = nonPlainOptions
     .filter((p) => parseFloat(p.value) < 0)
-    .sort((a, b) => parseFloat(a.value) - parseFloat(b.value)); // most negative first
+    .sort((a, b) => parseFloat(b.value) - parseFloat(a.value)); // most negative last (starts at -0.5)
   const plusOptions = nonPlainOptions
     .filter((p) => parseFloat(p.value) > 0)
     .sort((a, b) => parseFloat(a.value) - parseFloat(b.value)); // lowest positive first

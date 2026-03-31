@@ -7,7 +7,6 @@ datasource db {
   provider = "mysql"
 }
 
-
 // ─────────────────────────────────────────────────────
 //  ADMIN
 // ─────────────────────────────────────────────────────
@@ -56,20 +55,20 @@ model Customer {
 //  CATEGORY  (hierarchical — parent/child)
 // ─────────────────────────────────────────────────────
 model Category {
-  id       String @id @default(cuid())
+  id       String  @id @default(cuid())
   name     String
-  slug     String @unique
-  image    String?  @db.Text
-  position Int    @default(0)
+  slug     String  @unique
+  image    String? @db.Text
+  position Int     @default(0)
 
   parentId String?
   parent   Category?  @relation("CategoryChildren", fields: [parentId], references: [id])
   children Category[] @relation("CategoryChildren")
 
-  brandId  String?
-  brand    Brand?  @relation(fields: [brandId], references: [id])
+  brandId String?
+  brand   Brand?  @relation(fields: [brandId], references: [id])
 
-  products Product[]
+  products  Product[]
   discounts Discount[] @relation("CategoryDiscounts")
 
   createdAt DateTime @default(now())
@@ -106,7 +105,7 @@ model Product {
   price           Float
   comparePrice    Float?
   discountPercent Float         @default(0)
-  color           String?       // e.g. "BLUE", "BROWN" — configurable
+  color           String? // e.g. "BLUE", "BROWN" — configurable
   disposability   String        @default("ONE_DAY") // configurable
   inStock         Boolean       @default(true)
   stockCount      Int           @default(0)
@@ -146,21 +145,20 @@ model ProductPowerOption {
   id        String  @id @default(cuid())
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  value     String  // "-1.00", "0.00"
-  label     String  // "0.00 Plain (Normal Eye)"
+  value     String // "-1.00", "0.00"
+  label     String // "0.00 Plain (Normal Eye)"
   position  Int     @default(0)
 
   @@map("product_power_options")
 }
 
-
 //  AFTERCARE ADD-ONS
 // ─────────────────────────────────────────────────────
 model AftercareAddon {
   id          String  @id @default(cuid())
-  name        String  // "Starter Kit"
-  extraCharge Float   // amount added to total (280, 400)
-  retailPrice Float   // shown price (500, 750)
+  name        String // "Starter Kit"
+  extraCharge Float // amount added to total (280, 400)
+  retailPrice Float // shown price (500, 750)
   description String?
   position    Int     @default(0)
   active      Boolean @default(true)
@@ -172,29 +170,29 @@ model AftercareAddon {
 //  DISCOUNT / COUPON
 // ─────────────────────────────────────────────────────
 model Discount {
-  id              String       @id @default(cuid())
-  code            String?      @unique  // "SAVE10", "EID25" (optional for automatic discounts)
-  title           String
-  type            DiscountType // PERCENTAGE | FIXED_AMOUNT | FREE_SHIPPING
-  value           Float        // 10 = 10%, or 200 = Rs200 off
-  minOrderAmount  Float?       // minimum cart total to apply
-  maxUsage        Int?         // total uses allowed (null = unlimited)
-  usedCount       Int          @default(0)
-  perCustomerMax  Int?         // max per customer (null = unlimited)
-  startsAt        DateTime?
-  endsAt          DateTime?
-  active          Boolean      @default(true)
-  isAutomatic     Boolean      @default(false) // If true, automatically applies without code
-  appliesToAll    Boolean      @default(true)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id             String       @id @default(cuid())
+  code           String?      @unique // "SAVE10", "EID25" (optional for automatic discounts)
+  title          String
+  type           DiscountType // PERCENTAGE | FIXED_AMOUNT | FREE_SHIPPING
+  value          Float // 10 = 10%, or 200 = Rs200 off
+  minOrderAmount Float? // minimum cart total to apply
+  maxUsage       Int? // total uses allowed (null = unlimited)
+  usedCount      Int          @default(0)
+  perCustomerMax Int? // max per customer (null = unlimited)
+  startsAt       DateTime?
+  endsAt         DateTime?
+  active         Boolean      @default(true)
+  isAutomatic    Boolean      @default(false) // If true, automatically applies without code
+  appliesToAll   Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
-  orders          Order[]
-  
+  orders Order[]
+
   // Relations for specific discount targeting
-  categories      Category[]   @relation("CategoryDiscounts")
-  products        Product[]    @relation("ProductDiscounts")
-  brands          Brand[]      @relation("BrandDiscounts")
+  categories Category[] @relation("CategoryDiscounts")
+  products   Product[]  @relation("ProductDiscounts")
+  brands     Brand[]    @relation("BrandDiscounts")
 
   @@map("discounts")
 }
@@ -209,10 +207,10 @@ enum DiscountType {
 //  ORDER
 // ─────────────────────────────────────────────────────
 model Order {
-  id                String        @id @default(cuid())
-  orderNumber       Int           @unique @default(autoincrement())
-  customerId        String?
-  customer          Customer?     @relation(fields: [customerId], references: [id])
+  id          String    @id @default(cuid())
+  orderNumber Int       @unique @default(autoincrement())
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id])
 
   // Guest checkout removed
 
@@ -221,23 +219,23 @@ model Order {
   paymentMethod     PaymentMethod @default(COD)
   fulfillmentStatus FulfillStatus @default(UNFULFILLED)
 
-  subtotal          Float
-  shippingCost      Float         @default(0)
-  discountAmount    Float         @default(0)
-  total             Float
+  subtotal       Float
+  shippingCost   Float @default(0)
+  discountAmount Float @default(0)
+  total          Float
 
-  discountId        String?
-  discount          Discount?     @relation(fields: [discountId], references: [id])
-  discountCode      String?
+  discountId   String?
+  discount     Discount? @relation(fields: [discountId], references: [id])
+  discountCode String?
 
-  shippingAddress   Json
-  notes             String?       @db.Text
-  trackingNumber    String?
+  shippingAddress Json
+  notes           String? @db.Text
+  trackingNumber  String?
 
-  items             OrderItem[]
+  items OrderItem[]
 
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("orders")
 }
@@ -284,21 +282,21 @@ enum FulfillStatus {
 //  ORDER ITEMS
 // ─────────────────────────────────────────────────────
 model OrderItem {
-  id              String    @id @default(cuid())
-  orderId         String
-  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId       String?
-  product         Product?  @relation(fields: [productId], references: [id])
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
 
   productTitle    String
   productImage    String?
-  lensType        LensType  @default(PLAIN)
+  lensType        LensType @default(PLAIN)
   rightEyePower   String?
   leftEyePower    String?
   prescriptionUrl String?
   aftercareName   String?
-  aftercarePrice  Float     @default(0)
-  qty             Int       @default(1)
+  aftercarePrice  Float    @default(0)
+  qty             Int      @default(1)
   unitPrice       Float
   total           Float
 
@@ -370,10 +368,14 @@ model Review {
   product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id])
-  name       String
-  rating     Int       // 1–5
-  comment    String?   @db.Text
+  name         String
+  customerMeta String?
+  image        String?   @db.LongText
+  rating       Int // 1–5
+  heading      String?
+  text         String?   @db.Text
   approved   Boolean   @default(false)
+  isFeatured Boolean   @default(false)
   createdAt  DateTime  @default(now())
 
   @@map("reviews")

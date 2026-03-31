@@ -101,7 +101,7 @@ const NAV: NavSection[] = [
       { label: "Analytics", href: "/admin/analytics" },
       { label: "Store Appearance", href: "/admin/marketing/store-settings" },
       { label: "Discounts", href: "/admin/discounts" },
-      { label: "Testimonials", href: "/admin/testimonials" },
+      { label: "Product Reviews", href: "/admin/reviews" },
     ],
   },
   {

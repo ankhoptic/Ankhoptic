@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useCartStore } from "@/store/cartStore";
 import { usePrescriptionStore } from "@/store/prescriptionStore";
 
@@ -23,7 +24,7 @@ type Product = {
   category: { name: string; slug: string } | null;
   status: string;
   powerOptions: PowerOption[];
-  reviews: unknown[];
+  reviews: { id: string; name: string; rating: number; heading: string | null; text: string | null; customerMeta: string | null; image: string | null; createdAt: string }[];
   _count: { reviews: number };
 };
 
@@ -57,6 +58,24 @@ export default function ProductPage({ slug }: { slug: string }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("Description");
+
+  // Review form state
+  const { data: session } = useSession();
+  const [isWritingReview, setIsWritingReview] = useState(false);
+  const [reviewName, setReviewName] = useState("");
+  const [reviewHeading, setReviewHeading] = useState("");
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewCustomerMeta, setReviewCustomerMeta] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewFeedback, setReviewFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  // Auto-fill review name if user is logged in
+  useEffect(() => {
+    if (session?.user?.name) {
+      setReviewName(session.user.name);
+    }
+  }, [session]);
 
   useEffect(() => {
     if (!slug) return;
@@ -124,10 +143,10 @@ export default function ProductPage({ slug }: { slug: string }) {
   );
   const minusOptions = nonPlainOptions
     .filter((p) => parseFloat(p.value) < 0)
-    .sort((a, b) => parseFloat(a.value) - parseFloat(b.value));
+    .sort((a, b) => parseFloat(b.value) - parseFloat(a.value)); // e.g. -0.5, -1.0, -1.5
   const plusOptions = nonPlainOptions
     .filter((p) => parseFloat(p.value) > 0)
-    .sort((a, b) => parseFloat(a.value) - parseFloat(b.value));
+    .sort((a, b) => parseFloat(a.value) - parseFloat(b.value)); // e.g. 0.5, 1.0, 1.5
   const powerDropdownOptions: PowerOption[] = [
     ...minusOptions,
     plainOption,
@@ -151,6 +170,57 @@ export default function ProductPage({ slug }: { slug: string }) {
       }
       setUploadProgress(progress);
     }, 150);
+  };
+
+  const totalReviews = product?._count?.reviews || 0;
+  const avgRating = totalReviews > 0
+    ? (product!.reviews.reduce((acc, r) => acc + r.rating, 0) / (product!.reviews.length || 1)).toFixed(1)
+    : "0.0";
+
+  const getRatingCount = (stars: number) => {
+    return product?.reviews?.filter((r) => r.rating === stars).length || 0;
+  };
+
+  const getRatingPercent = (stars: number) => {
+    const count = getRatingCount(stars);
+    const total = product?.reviews?.length || 0;
+    if (total === 0) return 0;
+    return Math.round((count / total) * 100);
+  };
+
+  const submitReview = async () => {
+    if (!reviewName.trim()) {
+      setReviewFeedback({ type: "error", msg: "Please enter your name." });
+      return;
+    }
+    setReviewSubmitting(true);
+    setReviewFeedback(null);
+    try {
+      const res = await fetch(`/api/store/products/${slug}/reviews`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: reviewName,
+          rating: reviewRating,
+          heading: reviewHeading,
+          text: reviewText,
+          customerMeta: reviewCustomerMeta,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to submit");
+      setReviewFeedback({ type: "success", msg: "Review submitted for approval!" });
+      setReviewName(session?.user?.name || "");
+      setReviewHeading("");
+      setReviewText("");
+      setReviewCustomerMeta("");
+      setReviewRating(5);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to submit";
+      setReviewFeedback({ type: "error", msg });
+    } finally {
+      setReviewSubmitting(false);
+    }
   };
 
   const handleAddToCart = () => {
@@ -945,44 +1015,121 @@ export default function ProductPage({ slug }: { slug: string }) {
                       <div className="tab-reviews-heading">
                         <div className="top">
                           <div className="text-center">
-                            <h1 className="number fw-6">4.8</h1>
+                            <h1 className="number fw-6">{avgRating}</h1>
                             <div className="list-star">
-                              <i className="icon icon-star"></i>
-                              <i className="icon icon-star"></i>
-                              <i className="icon icon-star"></i>
-                              <i className="icon icon-star"></i>
-                              <i className="icon icon-star"></i>
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <i
+                                  key={s}
+                                  className={`icon icon-star${s <= parseFloat(avgRating) ? "" : "-empty"}`}
+                                  style={{ color: s <= parseFloat(avgRating) ? "#ffc107" : "#e0e0e0" }}
+                                ></i>
+                              ))}
                             </div>
-                            <p>(168 Ratings)</p>
+                            <p>({totalReviews} Ratings)</p>
                           </div>
                           <div className="rating-score">
-                            <div className="item">
-                              <div className="number-1 text-caption-1">5</div>
-                              <i className="icon icon-star"></i>
-                              <div className="line-bg">
-                                <div style={{ width: "94.67%" }}></div>
+                            {[5, 4, 3, 2, 1].map((stars) => (
+                              <div className="item" key={stars}>
+                                <div className="number-1 text-caption-1">{stars}</div>
+                                <i className="icon icon-star" style={{ color: "#ffc107" }}></i>
+                                <div className="line-bg">
+                                  <div style={{ width: `${getRatingPercent(stars)}%` }}></div>
+                                </div>
+                                <div className="number-2 text-caption-1">{getRatingCount(stars)}</div>
                               </div>
-                              <div className="number-2 text-caption-1">59</div>
-                            </div>
-                            <div className="item">
-                              <div className="number-1 text-caption-1">4</div>
-                              <i className="icon icon-star"></i>
-                              <div className="line-bg">
-                                <div style={{ width: "60%" }}></div>
-                              </div>
-                              <div className="number-2 text-caption-1">46</div>
-                            </div>
+                            ))}
                           </div>
                         </div>
                         <div>
-                          <div className="tf-btn btn-outline-dark fw-6 btn-comment-review btn-cancel-review">
-                            Cancel Review
-                          </div>
-                          <div className="tf-btn btn-outline-dark fw-6 btn-comment-review btn-write-review">
-                            Write a review
-                          </div>
+                          {!session ? (
+                            <Link href={`/account/login?redirect=/products/${slug}`} className="tf-btn btn-outline-dark fw-6 btn-comment-review btn-write-review">
+                              Login to write a review
+                            </Link>
+                          ) : isWritingReview ? (
+                            <div className="tf-btn btn-outline-dark fw-6 btn-comment-review btn-cancel-review" onClick={() => { setIsWritingReview(false); setReviewFeedback(null); }}>
+                              Cancel Review
+                            </div>
+                          ) : (
+                            <div className="tf-btn btn-outline-dark fw-6 btn-comment-review btn-write-review" onClick={() => setIsWritingReview(true)}>
+                              Write a review
+                            </div>
+                          )}
                         </div>
                       </div>
+
+                      {/* Write Review Form */}
+                      {isWritingReview && session && (
+                        <div className="reply-comment form-review mt-4" style={{ display: "block", background: "#f9f9f9", padding: 20, borderRadius: 8 }}>
+                          <h5 className="mb-3">Submit your review</h5>
+                          {reviewFeedback && (
+                            <div className={`alert ${reviewFeedback.type === "success" ? "alert-success" : "alert-danger"} mb-3`} style={{ padding: "10px", borderRadius: "5px" }}>
+                              {reviewFeedback.msg}
+                            </div>
+                          )}
+                          <div className="form-group mb-3">
+                            <label className="fw-5 mb-1">Your Name *</label>
+                            <input type="text" className="form-control" value={reviewName} onChange={(e) => setReviewName(e.target.value)} required readOnly style={{ backgroundColor: "#eaeaea" }} />
+                            <small className="text-muted">Auto-filled from your profile</small>
+                          </div>
+                          <div className="form-group mb-3">
+                            <label className="fw-5 mb-1">Customer Label (e.g. Verified Buyer)</label>
+                            <input type="text" className="form-control" value={reviewCustomerMeta} onChange={(e) => setReviewCustomerMeta(e.target.value)} />
+                          </div>
+                          <div className="form-group mb-3">
+                            <label className="fw-5 mb-1">Rating *</label>
+                            <div className="d-flex align-items-center gap-2">
+                              {[1, 2, 3, 4, 5].map((val) => (
+                                <i
+                                  key={val}
+                                  className={`icon icon-star`}
+                                  style={{ fontSize: 24, cursor: "pointer", color: val <= reviewRating ? "#ffc107" : "#e0e0e0" }}
+                                  onClick={() => setReviewRating(val)}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          <div className="form-group mb-3">
+                            <label className="fw-5 mb-1">Review Title</label>
+                            <input type="text" className="form-control" value={reviewHeading} onChange={(e) => setReviewHeading(e.target.value)} />
+                          </div>
+                          <div className="form-group mb-3">
+                            <label className="fw-5 mb-1">Review Text</label>
+                            <textarea className="form-control" rows={4} value={reviewText} onChange={(e) => setReviewText(e.target.value)} required></textarea>
+                          </div>
+                          <button className="tf-btn btn-fill justify-content-center mt-3" onClick={submitReview} disabled={reviewSubmitting}>
+                            {reviewSubmitting ? "Submitting..." : "Submit Review"}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Display Existing Reviews */}
+                      <div className="review-list mt-5">
+                        {product?.reviews && product.reviews.length > 0 ? (
+                          product.reviews.map((rev) => (
+                            <div key={rev.id} className="review-item mb-4 pb-4 border-bottom">
+                              <div className="d-flex align-items-center gap-2 mb-2">
+                                <div className="list-star" style={{ display: "flex" }}>
+                                  {[1, 2, 3, 4, 5].map((s) => (
+                                    <i
+                                      key={s}
+                                      className={`icon icon-star`}
+                                      style={{ color: s <= rev.rating ? "#ffc107" : "#e0e0e0" }}
+                                    ></i>
+                                  ))}
+                                </div>
+                                <span className="fw-6">{rev.name}</span>
+                                {rev.customerMeta && <span className="ms-2 badge bg-secondary">{rev.customerMeta}</span>}
+                                <span className="text-secondary text-caption-1">{new Date(rev.createdAt).toLocaleDateString()}</span>
+                              </div>
+                              {rev.heading && <h6 className="mb-2 fw-6">{rev.heading}</h6>}
+                              {rev.text && <p>{rev.text}</p>}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center text-secondary py-4">No reviews yet. Be the first to review this product!</div>
+                        )}
+                      </div>
+
                     </div>
                   </div>
                   <div

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getActiveAutomaticDiscounts, applyDiscountToProduct } from "@/lib/discounts";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -17,11 +19,11 @@ export async function GET(
           powerOptions: { orderBy: { position: "asc" } },
           reviews: {
             where:   { approved: true },
-            select:  { id: true, name: true, rating: true, comment: true, createdAt: true },
+            select:  { id: true, name: true, rating: true, heading: true, text: true, customerMeta: true, image: true, createdAt: true },
             orderBy: { createdAt: "desc" },
             take:    10,
           },
-          _count: { select: { reviews: true } },
+          _count: { select: { reviews: { where: { approved: true } } } },
         },
       }),
       getActiveAutomaticDiscounts(),
