@@ -1120,8 +1120,64 @@ export default function ProductPage({ slug }: { slug: string }) {
                         </div>
                       </div>
 
-                      {isWritingReview && session ? (
-                        <form className="form-write-review write-review-wrap mt-4 mb-4" onSubmit={(e) => { e.preventDefault(); submitReview(); }}>
+                      {!isWritingReview ? (
+                        <div className="reply-comment cancel-review-wrap">
+                          <div className="d-flex mb_24 gap-20 align-items-center justify-content-between flex-wrap">
+                            <h5 className="">{totalReviews} Comments</h5>
+                            <div className="d-flex align-items-center gap-12">
+                              <div className="text-caption-1">Sort by:</div>
+                              <div className="tf-dropdown-sort">
+                                <div className="btn-select">
+                                  <span className="text-sort-value">Most Recent</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="reply-comment-wrap">
+                            {product?.reviews && product.reviews.length > 0 ? (
+                              product.reviews.map((rev) => (
+                                <div key={rev.id} className="reply-comment-item">
+                                  <div className="user">
+                                    <div className="image bg-secondary d-flex align-items-center justify-content-center text-white rounded-circle fw-bold" style={{ width: 60, height: 60, fontSize: 24, flexShrink: 0, overflow: 'hidden' }}>
+                                      {rev.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <h6>
+                                        <span className="link">
+                                          {rev.name}
+                                        </span>
+                                        {rev.customerMeta && <span className="ms-2 badge bg-secondary text-caption-1">{rev.customerMeta}</span>}
+                                      </h6>
+                                      <div className="day text_black-2">{new Date(rev.createdAt).toLocaleDateString()}</div>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="list-star" style={{ marginTop: 6 }}>
+                                    {[1, 2, 3, 4, 5].map((s) => (
+                                      <i
+                                        key={s}
+                                        className={`icon icon-star`}
+                                        style={{ color: s <= rev.rating ? "#ffc107" : "#e0e0e0", fontSize: 14 }}
+                                      ></i>
+                                    ))}
+                                  </div>
+                                  {rev.heading && <h6 className="fw-6 mt-3 mb-2">{rev.heading}</h6>}
+                                  <p className="text_black-2 mt-2" style={{ whiteSpace: "pre-wrap" }}>{rev.text}</p>
+                                  {rev.image && (
+                                    <div className="mt-3" style={{ width: "120px", height: "120px", position: "relative" }}>
+                                      <Image src={rev.image} alt="Review Image" fill style={{ objectFit: "cover", borderRadius: "8px" }} />
+                                    </div>
+                                  )}
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-center text-secondary py-4">No reviews yet. Be the first to review this product!</div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <form className="form-write-review write-review-wrap" onSubmit={(e) => { e.preventDefault(); submitReview(); }}>
                           <div className="heading">
                             <h5>Write a review:</h5>
                             <div className="list-rating-check">
@@ -1196,10 +1252,9 @@ export default function ProductPage({ slug }: { slug: string }) {
                             </fieldset>
                             <div className="box-field group-2 mt-4">
                               <fieldset>
-                                <label className="label">Your Name *</label>
                                 <input
                                   type="text"
-                                  placeholder="Your Name *"
+                                  placeholder="You Name (Public)"
                                   value={reviewName}
                                   onChange={(e) => setReviewName(e.target.value)}
                                   required
@@ -1208,14 +1263,25 @@ export default function ProductPage({ slug }: { slug: string }) {
                                 />
                               </fieldset>
                               <fieldset>
-                                <label className="label">Customer Label (e.g. Verified Buyer)</label>
                                 <input
-                                  type="text"
-                                  placeholder="Customer Label (e.g. Verified Buyer)"
-                                  value={reviewCustomerMeta}
-                                  onChange={(e) => setReviewCustomerMeta(e.target.value)}
+                                  type="email"
+                                  placeholder="Your email (private)"
+                                  value={session?.user?.email || ""}
+                                  readOnly
+                                  style={{ backgroundColor: "#eaeaea" }}
                                 />
                               </fieldset>
+                            </div>
+                            <div className="box-check mt-3 d-none">
+                              <input
+                                type="checkbox"
+                                name="availability"
+                                className="tf-check"
+                                id="check1"
+                              />
+                              <label className="text_black-2" htmlFor="check1">
+                                Save my name, email, and website in this browser for the next time I comment.
+                              </label>
                             </div>
                           </div>
                           <div className="button-submit mt-4">
@@ -1224,66 +1290,10 @@ export default function ProductPage({ slug }: { slug: string }) {
                               type="submit"
                               disabled={reviewSubmitting}
                             >
-                              {reviewSubmitting ? "Submitting..." : "Submit Review"}
+                              {reviewSubmitting ? "Submitting..." : "Submit Reviews"}
                             </button>
                           </div>
                         </form>
-                      ) : (
-                        <div className="reply-comment cancel-review-wrap mt-4">
-                          <div className="d-flex mb_24 gap-20 align-items-center justify-content-between flex-wrap">
-                            <h5 className="">{totalReviews} Comments</h5>
-                            <div className="d-flex align-items-center gap-12">
-                              <div className="text-caption-1">Sort by:</div>
-                              <div className="tf-dropdown-sort">
-                                <div className="btn-select">
-                                  <span className="text-sort-value">Most Recent</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="reply-comment-wrap mt-4">
-                            {product?.reviews && product.reviews.length > 0 ? (
-                              product.reviews.map((rev) => (
-                                <div key={rev.id} className="reply-comment-item">
-                                  <div className="user">
-                                    <div className="image bg-secondary d-flex align-items-center justify-content-center text-white rounded-circle fw-bold" style={{ width: 60, height: 60, fontSize: 24, flexShrink: 0 }}>
-                                      {rev.name.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div>
-                                      <h6>
-                                        <span className="link">
-                                          {rev.name}
-                                        </span>
-                                        {rev.customerMeta && <span className="ms-2 badge bg-secondary text-caption-1">{rev.customerMeta}</span>}
-                                      </h6>
-                                      <div className="day text_black-2">{new Date(rev.createdAt).toLocaleDateString()}</div>
-                                      <div className="list-star" style={{ marginTop: 6 }}>
-                                        {[1, 2, 3, 4, 5].map((s) => (
-                                          <i
-                                            key={s}
-                                            className={`icon icon-star`}
-                                            style={{ color: s <= rev.rating ? "#ffc107" : "#e0e0e0", fontSize: 14 }}
-                                          ></i>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </div>
-                                  
-                                  {rev.heading && <h6 className="fw-6 mt-3 mb-2">{rev.heading}</h6>}
-                                  {rev.text && <p className="text_black-2 mt-2" style={{ whiteSpace: "pre-wrap" }}>{rev.text}</p>}
-                                  {rev.image && (
-                                    <div className="mt-3" style={{ width: "120px", height: "120px", position: "relative" }}>
-                                      <Image src={rev.image} alt="Review Image" fill style={{ objectFit: "cover", borderRadius: "8px" }} />
-                                    </div>
-                                  )}
-                                </div>
-                              ))
-                            ) : (
-                              <div className="text-center text-secondary py-4">No reviews yet. Be the first to review this product!</div>
-                            )}
-                          </div>
-                        </div>
                       )}
                     </div>
                   </div>
