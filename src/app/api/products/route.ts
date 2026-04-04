@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
         title:        body.title,
         slug:         body.slug,
         description:  body.description ?? null,
+        productType:  body.productType ?? "LENS",
         price:        parseFloat(body.price),
         comparePrice: body.comparePrice ? parseFloat(body.comparePrice) : null,
         color:        body.color ?? null,

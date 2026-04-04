@@ -102,6 +102,7 @@ model Product {
   title           String
   slug            String        @unique
   description     String?       @db.Text
+  productType     ProductType   @default(LENS)
   price           Float
   comparePrice    Float?
   discountPercent Float         @default(0)
@@ -136,6 +137,12 @@ enum ProductStatus {
   ACTIVE
   DRAFT
   ARCHIVED
+}
+
+enum ProductType {
+  LENS
+  GLASSES
+  ACCESSORY
 }
 
 // ─────────────────────────────────────────────────────

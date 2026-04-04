@@ -11,7 +11,7 @@ export async function PUT(
   if (authErr) return authErr;
 
   try {
-    const { name, slug, parentId, brandId } = await req.json();
+    const { name, slug, parentId, brandId, image } = await req.json();
     const { id } = await params;
 
     let finalSlug = slug || name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
@@ -28,6 +28,7 @@ export async function PUT(
       data: {
         name,
         slug: finalSlug,
+        image: image || null,
         parentId: parentId || null,
         brandId: brandId || null,
       },

@@ -18,6 +18,8 @@ import {
   AdminModal,
   AdminLoader,
 } from "@/components/admin/ui";
+import { ImageUpload } from "@/components/admin/ImageUpload";
+import { Image } from "@chakra-ui/react";
 import toast from "react-hot-toast";
 
 interface BrandOption {
@@ -29,6 +31,7 @@ interface CategoryData {
   id: string;
   name: string;
   slug: string;
+  image: string | null;
   parentId: string | null;
   brandId: string | null;
   brand?: { id: string; name: string } | null;
@@ -53,6 +56,11 @@ export default function CategoriesPage() {
   const [slug, setSlug] = useState("");
   const [parentId, setParentId] = useState("");
   const [brandId, setBrandId] = useState("");
+  const [image, setImage] = useState("");
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<{ name?: string }>({});
 
   const fetchCategories = () => {
@@ -82,6 +90,9 @@ export default function CategoriesPage() {
     setSlug("");
     setParentId("");
     setBrandId("");
+    setImage("");
+    setPreviewUrl("");
+    setPendingFile(null);
     setErrors({});
     setIsModalOpen(true);
   };
@@ -92,6 +103,9 @@ export default function CategoriesPage() {
     setSlug(c.slug || "");
     setParentId(c.parentId || "");
     setBrandId(c.brandId || "");
+    setImage(c.image || "");
+    setPreviewUrl(c.image || "");
+    setPendingFile(null);
     setErrors({});
     setIsModalOpen(true);
   };
@@ -112,6 +126,47 @@ export default function CategoriesPage() {
     if (!validate()) return;
     setSubmitting(true);
     try {
+      let finalImage = image;
+      if (pendingFile) {
+        setUploading(true);
+        setUploadProgress(0);
+        finalImage = await new Promise<string>((resolve, reject) => {
+          const fd = new FormData();
+          fd.append("file", pendingFile);
+          const xhr = new XMLHttpRequest();
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable)
+              setUploadProgress(Math.round((e.loaded / e.total) * 100));
+          };
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                resolve(JSON.parse(xhr.responseText).url);
+              } catch {
+                reject(new Error("Invalid upload response"));
+              }
+            } else {
+              try {
+                reject(
+                  new Error(
+                    JSON.parse(xhr.responseText).error ?? "Upload failed",
+                  ),
+                );
+              } catch {
+                reject(new Error("Upload failed"));
+              }
+            }
+          };
+          xhr.onerror = () => reject(new Error("Network error during upload"));
+          xhr.open("POST", "/api/upload");
+          xhr.send(fd);
+        });
+        setImage(finalImage);
+        setPendingFile(null);
+        setUploading(false);
+        setUploadProgress(100);
+      }
+
       const isNew = !editingCategory;
       const endpoint = isNew
         ? "/api/categories"
@@ -123,6 +178,7 @@ export default function CategoriesPage() {
         body: JSON.stringify({
           name: name.trim(),
           slug: slug.trim() || name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+          image: finalImage || null,
           parentId: parentId || null,
           brandId: brandId || null,
         }),
@@ -133,6 +189,7 @@ export default function CategoriesPage() {
       fetchCategories();
     } catch {
       toast.error("Error saving category");
+      setUploading(false);
     } finally {
       setSubmitting(false);
     }
@@ -207,7 +264,7 @@ export default function CategoriesPage() {
             footerText={`${total} parent categories, ${totalSubcategories} subcategories`}
             showPagination={false}
           >
-          <THead columns={["Category", "Brand", "Type", "Products", "Created", ""]} />
+          <THead columns={["Category", "Image", "Brand", "Type", "Products", "Created", ""]} />
           <tbody>
             {categories.length === 0 ? (
               <EmptyRow
@@ -226,6 +283,44 @@ export default function CategoriesPage() {
                       <Text fontSize="11.5px" color={T.sub} mt={0.5}>
                         /{cat.slug}
                       </Text>
+                    </TD>
+                    <TD>
+                      {cat.image ? (
+                        <Box
+                          w="40px"
+                          h="40px"
+                          borderRadius="8px"
+                          border={`1px solid ${T.border}`}
+                          bg="white"
+                          display="flex"
+                          alignItems="center"
+                          justifyContent="center"
+                          overflow="hidden"
+                        >
+                          <Image
+                            src={cat.image}
+                            alt={cat.name}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                            }}
+                          />
+                        </Box>
+                      ) : (
+                         <Box
+                          w="40px"
+                          h="40px"
+                          borderRadius="8px"
+                          border={`1px solid ${T.border}`}
+                          bg={T.bg}
+                          display="flex"
+                          alignItems="center"
+                          justifyContent="center"
+                        >
+                          <Text fontSize="16px">📁</Text>
+                        </Box>
+                      )}
                     </TD>
                     <TD>
                       <Text fontSize="12.5px" color={cat.brand ? T.text : T.muted}>
@@ -309,6 +404,33 @@ export default function CategoriesPage() {
                         </HStack>
                       </TD>
                       <TD>
+                        {child.image ? (
+                          <Box
+                            w="32px"
+                            h="32px"
+                            borderRadius="6px"
+                            border={`1px solid ${T.border}`}
+                            bg="white"
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
+                            overflow="hidden"
+                          >
+                            <Image
+                              src={child.image}
+                              alt={child.name}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                              }}
+                            />
+                          </Box>
+                        ) : (
+                          <Text fontSize="12px" color={T.muted}>—</Text>
+                        )}
+                      </TD>
+                      <TD>
                         <Text fontSize="12.5px" color={child.brand ? T.text : T.muted}>
                           {child.brand?.name || "—"}
                         </Text>
@@ -372,6 +494,20 @@ export default function CategoriesPage() {
         title={editingCategory ? "Edit Category" : "Add Category"}
       >
         <Box mb={4}>
+          <FormField label="Category Image">
+            <ImageUpload
+              value={image}
+              previewUrl={previewUrl}
+              onChange={setImage}
+              onPreview={setPreviewUrl}
+              onFileSelect={setPendingFile}
+              uploadOnSelect={false}
+              uploading={uploading}
+              progress={uploadProgress}
+              label="Drop image here or click to browse"
+            />
+          </FormField>
+
           {/* Name */}
           <FormField label="Category Name" required>
             <InputField
@@ -435,9 +571,9 @@ export default function CategoriesPage() {
           <AdminButton
             variant="primary"
             onClick={handleSave}
-            disabled={submitting}
+            disabled={submitting || uploading}
           >
-            {submitting ? "Saving..." : "Save"}
+            {uploading ? "Uploading..." : submitting ? "Saving..." : "Save"}
           </AdminButton>
         </HStack>
       </AdminModal>

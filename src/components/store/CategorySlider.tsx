@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { prisma } from "@/lib/db";
 import CarouselTrigger from "./CarouselTrigger";
 
@@ -7,6 +8,7 @@ export default async function CategorySlider() {
     id: string;
     name: string;
     slug: string;
+    image: string | null;
     brand: { name: string; slug: string } | null;
   };
 
@@ -17,6 +19,7 @@ export default async function CategorySlider() {
         id: true,
         name: true,
         slug: true,
+        image: true,
         brand: {
           select: { name: true, slug: true },
         },
@@ -88,35 +91,96 @@ export default async function CategorySlider() {
                           minHeight: 130,
                           gap: 6,
                           textDecoration: "none",
-                          background:
-                            "linear-gradient(135deg, #f0f4ff 0%, #e8eeff 100%)",
-                          padding: "14px 12px",
+                          background: cat.image
+                            ? "none"
+                            : "linear-gradient(135deg, #f0f4ff 0%, #e8eeff 100%)",
+                          padding: cat.image ? "0" : "14px 12px",
+                          position: "relative",
+                          overflow: "hidden",
                         }}
                       >
-                        {cat.brand && (
-                          <span
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 600,
-                              color: "#6b7280",
-                              textTransform: "uppercase",
-                              letterSpacing: 1.5,
-                            }}
-                          >
-                            {cat.brand.name}
-                          </span>
+                        {cat.image ? (
+                          <>
+                            <Image
+                              src={cat.image}
+                              alt={cat.name}
+                              fill
+                              style={{ objectFit: "cover" }}
+                              sizes="(max-width: 768px) 50vw, 25vw"
+                            />
+                            <div
+                              style={{
+                                position: "absolute",
+                                inset: 0,
+                                background: "rgba(0,0,0,0.3)",
+                                zIndex: 1,
+                              }}
+                            />
+                            <div
+                              style={{
+                                position: "relative",
+                                zIndex: 2,
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                            >
+                              {cat.brand && (
+                                <span
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    color: "#e5e7eb",
+                                    textTransform: "uppercase",
+                                    letterSpacing: 1.5,
+                                  }}
+                                >
+                                  {cat.brand.name}
+                                </span>
+                              )}
+                              <span
+                                style={{
+                                  fontSize: 16,
+                                  fontWeight: 700,
+                                  textAlign: "center",
+                                  color: "#fff",
+                                  lineHeight: 1.3,
+                                  textShadow: "0px 2px 4px rgba(0,0,0,0.5)",
+                                }}
+                              >
+                                {cat.name}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            {cat.brand && (
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  color: "#6b7280",
+                                  textTransform: "uppercase",
+                                  letterSpacing: 1.5,
+                                }}
+                              >
+                                {cat.brand.name}
+                              </span>
+                            )}
+                            <span
+                              style={{
+                                fontSize: 15,
+                                fontWeight: 700,
+                                textAlign: "center",
+                                color: "#1e2d5a",
+                                lineHeight: 1.3,
+                              }}
+                            >
+                              {cat.name}
+                            </span>
+                          </>
                         )}
-                        <span
-                          style={{
-                            fontSize: 15,
-                            fontWeight: 700,
-                            textAlign: "center",
-                            color: "#1e2d5a",
-                            lineHeight: 1.3,
-                          }}
-                        >
-                          {cat.name}
-                        </span>
                       </Link>
                     </div>
                   </div>

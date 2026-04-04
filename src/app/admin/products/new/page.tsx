@@ -238,6 +238,7 @@ function ProductForm() {
         title: form.title,
         slug: form.slug || toSlug(form.title),
         description: form.description || null,
+        productType: form.productType,
         price: parseFloat(form.price),
         comparePrice: form.comparePrice ? parseFloat(form.comparePrice) : null,
         color: isLens && form.color ? form.color.toUpperCase() : null,
