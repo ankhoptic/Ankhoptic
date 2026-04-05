@@ -7,6 +7,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const brandSlug     = searchParams.get("brand");
     const categorySlug  = searchParams.get("category");
+    const productType   = searchParams.get("productType");
     const color         = searchParams.get("color");
     const disposability = searchParams.get("disposability");
     const search        = searchParams.get("search");
@@ -17,6 +18,7 @@ export async function GET(req: NextRequest) {
 
     const where = {
       status: "ACTIVE" as const,
+      ...(productType  ? { productType: productType as any } : {}),
       ...(color        ? { color }                          : {}),
       ...(disposability? { disposability }                  : {}),
       ...(featured     ? { featured: true }                 : {}),

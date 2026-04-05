@@ -10,7 +10,7 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
-    const [product, activeDiscounts] = await Promise.all([
+    const [product, activeDiscounts, addons] = await Promise.all([
       prisma.product.findFirst({
         where: { slug, status: "ACTIVE" },
         include: {
@@ -27,11 +27,15 @@ export async function GET(
         },
       }),
       getActiveAutomaticDiscounts(),
+      prisma.aftercareAddon.findMany({
+        where: { active: true },
+        orderBy: { position: "asc" },
+      }),
     ]);
 
     if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
     const enriched = applyDiscountToProduct(product, activeDiscounts);
-    return NextResponse.json(enriched);
+    return NextResponse.json({ ...enriched, addons });
   } catch (err) {
     console.error("[GET /api/store/products/[slug]]", err);
     return NextResponse.json({ error: "Failed to fetch product" }, { status: 500 });

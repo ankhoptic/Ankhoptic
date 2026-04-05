@@ -7,9 +7,6 @@ datasource db {
   provider = "mysql"
 }
 
-// ─────────────────────────────────────────────────────
-//  ADMIN
-// ─────────────────────────────────────────────────────
 model AdminUser {
   id        String    @id @default(cuid())
   email     String    @unique
@@ -22,15 +19,6 @@ model AdminUser {
   @@map("admin_users")
 }
 
-enum AdminRole {
-  OWNER
-  ADMIN
-  STAFF
-}
-
-// ─────────────────────────────────────────────────────
-//  CUSTOMER
-// ─────────────────────────────────────────────────────
 model Customer {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -42,96 +30,281 @@ model Customer {
   ordersCount   Int       @default(0)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-
-  orders    Order[]
-  addresses Address[]
-  reviews   Review[]
-  cart      Cart?
+  addresses     Address[]
+  cart          Cart?
+  orders        Order[]
+  reviews       Review[]
 
   @@map("customers")
 }
 
-// ─────────────────────────────────────────────────────
-//  CATEGORY  (hierarchical — parent/child)
-// ─────────────────────────────────────────────────────
 model Category {
-  id       String  @id @default(cuid())
-  name     String
-  slug     String  @unique
-  image    String? @db.Text
-  position Int     @default(0)
-
-  parentId String?
-  parent   Category?  @relation("CategoryChildren", fields: [parentId], references: [id])
-  children Category[] @relation("CategoryChildren")
-
-  brandId String?
-  brand   Brand?  @relation(fields: [brandId], references: [id])
-
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  image     String?    @db.Text
+  position  Int        @default(0)
+  parentId  String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  brandId   String?
+  brand     Brand?     @relation(fields: [brandId], references: [id])
+  parent    Category?  @relation("CategoryChildren", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryChildren")
   products  Product[]
-  discounts Discount[] @relation("CategoryDiscounts")
+  discounts Discount[] @relation("categorydiscounts")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  @@index([brandId], map: "categories_brandId_fkey")
+  @@index([parentId], map: "categories_parentId_fkey")
   @@map("categories")
 }
 
-// ─────────────────────────────────────────────────────
-//  BRAND
-// ─────────────────────────────────────────────────────
 model Brand {
   id         String     @id @default(cuid())
   name       String
   slug       String     @unique
   logo       String?    @db.Text
-  products   Product[]
+  createdAt  DateTime   @default(now())
   categories Category[]
-  discounts  Discount[] @relation("BrandDiscounts")
-
-  createdAt DateTime @default(now())
+  products   Product[]
+  discounts  Discount[] @relation("branddiscounts")
 
   @@map("brands")
 }
 
-// ─────────────────────────────────────────────────────
-//  PRODUCT
-// ─────────────────────────────────────────────────────
 model Product {
-  id              String        @id @default(cuid())
+  id              String               @id @default(cuid())
   title           String
-  slug            String        @unique
-  description     String?       @db.Text
-  productType     ProductType   @default(LENS)
+  slug            String               @unique
+  description     String?              @db.Text
   price           Float
   comparePrice    Float?
-  discountPercent Float         @default(0)
-  color           String? // e.g. "BLUE", "BROWN" — configurable
-  disposability   String        @default("ONE_DAY") // configurable
-  inStock         Boolean       @default(true)
-  stockCount      Int           @default(0)
-  images          Json          @default("[]")
-  status          ProductStatus @default(DRAFT)
-  featured        Boolean       @default(false)
+  discountPercent Float                @default(0)
+  color           String?
+  inStock         Boolean              @default(true)
+  stockCount      Int                  @default(0)
+  images          String               @db.LongText
+  status          ProductStatus        @default(DRAFT)
+  featured        Boolean              @default(false)
+  brandId         String?
+  categoryId      String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  disposability   String               @default("ONE_DAY")
+  productType     ProductType
+  enableAddons    Boolean              @default(true)
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+  powerOptions    ProductPowerOption[]
+  brand           Brand?               @relation(fields: [brandId], references: [id])
+  category        Category?            @relation(fields: [categoryId], references: [id])
+  reviews         Review[]
+  discounts       Discount[]           @relation("productdiscounts")
 
-  brandId    String?
-  brand      Brand?    @relation(fields: [brandId], references: [id])
-  categoryId String?
-  category   Category? @relation(fields: [categoryId], references: [id])
-
-  powerOptions ProductPowerOption[]
-  orderItems   OrderItem[]
-  cartItems    CartItem[]
-  reviews      Review[]
-  discounts    Discount[]           @relation("ProductDiscounts")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  @@index([brandId], map: "products_brandId_fkey")
+  @@index([categoryId], map: "products_categoryId_fkey")
   @@map("products")
 }
 
-// LensColor and Modality are now dynamic (stored in SiteSetting)
+model ProductPowerOption {
+  id        String  @id @default(cuid())
+  productId String
+  value     String
+  label     String
+  position  Int     @default(0)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId], map: "product_power_options_productId_fkey")
+  @@map("product_power_options")
+}
+
+model AftercareAddon {
+  id          String  @id @default(cuid())
+  name        String
+  extraCharge Float
+  retailPrice Float
+  description String?
+  position    Int     @default(0)
+  active      Boolean @default(true)
+
+  @@map("aftercare_addons")
+}
+
+model Discount {
+  id             String       @id @default(cuid())
+  code           String?      @unique
+  title          String
+  type           DiscountType
+  value          Float
+  minOrderAmount Float?
+  maxUsage       Int?
+  usedCount      Int          @default(0)
+  perCustomerMax Int?
+  startsAt       DateTime?
+  endsAt         DateTime?
+  active         Boolean      @default(true)
+  appliesToAll   Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  isAutomatic    Boolean      @default(false)
+  orders         Order[]
+  brands         Brand[]      @relation("branddiscounts")
+  categories     Category[]   @relation("categorydiscounts")
+  products       Product[]    @relation("productdiscounts")
+
+  @@map("discounts")
+}
+
+model Order {
+  id                String        @id @default(cuid())
+  orderNumber       Int           @unique @default(autoincrement())
+  customerId        String?
+  status            OrderStatus   @default(PENDING)
+  paymentStatus     PaymentStatus @default(UNPAID)
+  paymentMethod     PaymentMethod @default(COD)
+  fulfillmentStatus FulfillStatus @default(UNFULFILLED)
+  subtotal          Float
+  shippingCost      Float         @default(0)
+  discountAmount    Float         @default(0)
+  total             Float
+  discountId        String?
+  discountCode      String?
+  shippingAddress   String        @db.LongText
+  notes             String?       @db.Text
+  trackingNumber    String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  items             OrderItem[]
+  customer          Customer?     @relation(fields: [customerId], references: [id])
+  discount          Discount?     @relation(fields: [discountId], references: [id])
+
+  @@index([customerId], map: "orders_customerId_fkey")
+  @@index([discountId], map: "orders_discountId_fkey")
+  @@map("orders")
+}
+
+model OrderItem {
+  id              String   @id @default(cuid())
+  orderId         String
+  productId       String?
+  productTitle    String
+  productImage    String?
+  lensType        LensType @default(PLAIN)
+  rightEyePower   String?
+  leftEyePower    String?
+  prescriptionUrl String?
+  aftercareName   String?
+  aftercarePrice  Float    @default(0)
+  qty             Int      @default(1)
+  unitPrice       Float
+  total           Float
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product         Product? @relation(fields: [productId], references: [id])
+
+  @@index([orderId], map: "order_items_orderId_fkey")
+  @@index([productId], map: "order_items_productId_fkey")
+  @@map("order_items")
+}
+
+model Cart {
+  id         String     @id @default(cuid())
+  customerId String?    @unique
+  sessionId  String?    @unique
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  items      CartItem[]
+  customer   Customer?  @relation(fields: [customerId], references: [id])
+
+  @@map("carts")
+}
+
+model CartItem {
+  id             String   @id @default(cuid())
+  cartId         String
+  productId      String
+  lensType       LensType @default(PLAIN)
+  rightEyePower  String?
+  leftEyePower   String?
+  aftercareName  String?
+  aftercarePrice Float    @default(0)
+  qty            Int      @default(1)
+  createdAt      DateTime @default(now())
+  cart           Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product        Product  @relation(fields: [productId], references: [id])
+
+  @@index([cartId], map: "cart_items_cartId_fkey")
+  @@index([productId], map: "cart_items_productId_fkey")
+  @@map("cart_items")
+}
+
+model Address {
+  id         String   @id @default(cuid())
+  customerId String
+  name       String
+  phone      String
+  line1      String
+  line2      String?
+  city       String
+  province   String
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  @@index([customerId], map: "addresses_customerId_fkey")
+  @@map("addresses")
+}
+
+model Review {
+  id           String    @id @default(cuid())
+  productId    String
+  customerId   String?
+  name         String
+  rating       Int
+  approved     Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  customerMeta String?
+  heading      String?
+  image        String?   @db.LongText
+  text         String?   @db.Text
+  isFeatured   Boolean   @default(false)
+  customer     Customer? @relation(fields: [customerId], references: [id])
+  product      Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([customerId], map: "reviews_customerId_fkey")
+  @@index([productId], map: "reviews_productId_fkey")
+  @@map("reviews")
+}
+
+model StoreSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String @db.Text
+
+  @@map("store_settings")
+}
+
+model Testimonial {
+  id          String   @id @default(cuid())
+  rating      Int      @default(5)
+  heading     String
+  text        String   @db.Text
+  authorName  String
+  authorMeta  String?
+  image       String?  @db.LongText
+  productName String?
+  productLink String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("testimonials")
+}
+
+enum AdminRole {
+  OWNER
+  ADMIN
+  STAFF
+}
 
 enum ProductStatus {
   ACTIVE
@@ -145,106 +318,10 @@ enum ProductType {
   ACCESSORY
 }
 
-// ─────────────────────────────────────────────────────
-//  POWER OPTIONS  (per-product)
-// ─────────────────────────────────────────────────────
-model ProductPowerOption {
-  id        String  @id @default(cuid())
-  productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  value     String // "-1.00", "0.00"
-  label     String // "0.00 Plain (Normal Eye)"
-  position  Int     @default(0)
-
-  @@map("product_power_options")
-}
-
-//  AFTERCARE ADD-ONS
-// ─────────────────────────────────────────────────────
-model AftercareAddon {
-  id          String  @id @default(cuid())
-  name        String // "Starter Kit"
-  extraCharge Float // amount added to total (280, 400)
-  retailPrice Float // shown price (500, 750)
-  description String?
-  position    Int     @default(0)
-  active      Boolean @default(true)
-
-  @@map("aftercare_addons")
-}
-
-// ─────────────────────────────────────────────────────
-//  DISCOUNT / COUPON
-// ─────────────────────────────────────────────────────
-model Discount {
-  id             String       @id @default(cuid())
-  code           String?      @unique // "SAVE10", "EID25" (optional for automatic discounts)
-  title          String
-  type           DiscountType // PERCENTAGE | FIXED_AMOUNT | FREE_SHIPPING
-  value          Float // 10 = 10%, or 200 = Rs200 off
-  minOrderAmount Float? // minimum cart total to apply
-  maxUsage       Int? // total uses allowed (null = unlimited)
-  usedCount      Int          @default(0)
-  perCustomerMax Int? // max per customer (null = unlimited)
-  startsAt       DateTime?
-  endsAt         DateTime?
-  active         Boolean      @default(true)
-  isAutomatic    Boolean      @default(false) // If true, automatically applies without code
-  appliesToAll   Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  orders Order[]
-
-  // Relations for specific discount targeting
-  categories Category[] @relation("CategoryDiscounts")
-  products   Product[]  @relation("ProductDiscounts")
-  brands     Brand[]    @relation("BrandDiscounts")
-
-  @@map("discounts")
-}
-
 enum DiscountType {
   PERCENTAGE
   FIXED_AMOUNT
   FREE_SHIPPING
-}
-
-// ─────────────────────────────────────────────────────
-//  ORDER
-// ─────────────────────────────────────────────────────
-model Order {
-  id          String    @id @default(cuid())
-  orderNumber Int       @unique @default(autoincrement())
-  customerId  String?
-  customer    Customer? @relation(fields: [customerId], references: [id])
-
-  // Guest checkout removed
-
-  status            OrderStatus   @default(PENDING)
-  paymentStatus     PaymentStatus @default(UNPAID)
-  paymentMethod     PaymentMethod @default(COD)
-  fulfillmentStatus FulfillStatus @default(UNFULFILLED)
-
-  subtotal       Float
-  shippingCost   Float @default(0)
-  discountAmount Float @default(0)
-  total          Float
-
-  discountId   String?
-  discount     Discount? @relation(fields: [discountId], references: [id])
-  discountCode String?
-
-  shippingAddress Json
-  notes           String? @db.Text
-  trackingNumber  String?
-
-  items OrderItem[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("orders")
 }
 
 enum OrderStatus {
@@ -285,136 +362,7 @@ enum FulfillStatus {
   CANCELLED
 }
 
-// ─────────────────────────────────────────────────────
-//  ORDER ITEMS
-// ─────────────────────────────────────────────────────
-model OrderItem {
-  id        String   @id @default(cuid())
-  orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId String?
-  product   Product? @relation(fields: [productId], references: [id])
-
-  productTitle    String
-  productImage    String?
-  lensType        LensType @default(PLAIN)
-  rightEyePower   String?
-  leftEyePower    String?
-  prescriptionUrl String?
-  aftercareName   String?
-  aftercarePrice  Float    @default(0)
-  qty             Int      @default(1)
-  unitPrice       Float
-  total           Float
-
-  @@map("order_items")
-}
-
 enum LensType {
   PLAIN
   EYESIGHT
-}
-
-// ─────────────────────────────────────────────────────
-//  CART
-// ─────────────────────────────────────────────────────
-model Cart {
-  id         String     @id @default(cuid())
-  customerId String?    @unique
-  customer   Customer?  @relation(fields: [customerId], references: [id])
-  sessionId  String?    @unique
-  items      CartItem[]
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-
-  @@map("carts")
-}
-
-model CartItem {
-  id             String   @id @default(cuid())
-  cartId         String
-  cart           Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  productId      String
-  product        Product  @relation(fields: [productId], references: [id])
-  lensType       LensType @default(PLAIN)
-  rightEyePower  String?
-  leftEyePower   String?
-  aftercareName  String?
-  aftercarePrice Float    @default(0)
-  qty            Int      @default(1)
-  createdAt      DateTime @default(now())
-
-  @@map("cart_items")
-}
-
-// ─────────────────────────────────────────────────────
-//  ADDRESS
-// ─────────────────────────────────────────────────────
-model Address {
-  id         String   @id @default(cuid())
-  customerId String
-  customer   Customer @relation(fields: [customerId], references: [id])
-  name       String
-  phone      String
-  line1      String
-  line2      String?
-  city       String
-  province   String
-  isDefault  Boolean  @default(false)
-  createdAt  DateTime @default(now())
-
-  @@map("addresses")
-}
-
-// ─────────────────────────────────────────────────────
-//  REVIEW
-// ─────────────────────────────────────────────────────
-model Review {
-  id         String    @id @default(cuid())
-  productId  String
-  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  customerId String?
-  customer   Customer? @relation(fields: [customerId], references: [id])
-  name         String
-  customerMeta String?
-  image        String?   @db.LongText
-  rating       Int // 1–5
-  heading      String?
-  text         String?   @db.Text
-  approved   Boolean   @default(false)
-  isFeatured Boolean   @default(false)
-  createdAt  DateTime  @default(now())
-
-  @@map("reviews")
-}
-
-// ─────────────────────────────────────────────────────
-//  STORE SETTINGS
-// ─────────────────────────────────────────────────────
-model StoreSetting {
-  id    String @id @default(cuid())
-  key   String @unique
-  value String @db.Text
-
-  @@map("store_settings")
-}
-
-// ─────────────────────────────────────────────────────
-//  TESTIMONIALS (HOMEPAGE)
-// ─────────────────────────────────────────────────────
-model Testimonial {
-  id          String   @id @default(cuid())
-  rating      Int      @default(5)
-  heading     String
-  text        String   @db.Text
-  authorName  String
-  authorMeta  String?
-  image       String?  @db.LongText
-  productName String?
-  productLink String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("testimonials")
 }

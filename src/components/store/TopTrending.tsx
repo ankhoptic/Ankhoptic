@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuickView } from "@/context/QuickViewContext";
 
 type Product = {
@@ -35,22 +35,12 @@ function ProductCard({ p }: { p: Product }) {
   return (
     <div className="card-product style-9">
       {/* Ribbon discount badge */}
-      {p.discountTitle && (
-        <div className="box-badge">{p.discountTitle}</div>
-      )}
+      {p.discountTitle && <div className="box-badge">{p.discountTitle}</div>}
       <div className="card-product-wrapper">
         <Link href={`/products/${p.slug}`} className="product-img">
           <Image
             className="img-product"
             src={p.images[0] ?? PLACEHOLDER}
-            alt={p.title}
-            width={600}
-            height={600}
-            style={{ objectFit: "cover" }}
-          />
-          <Image
-            className="img-hover"
-            src={p.images[1] ?? p.images[0] ?? PLACEHOLDER}
             alt={p.title}
             width={600}
             height={600}
@@ -91,13 +81,31 @@ function ProductCard({ p }: { p: Product }) {
             </span>
           )}
           {/* Price row — strikethrough compare + sale price */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              flexWrap: "wrap",
+              marginTop: 4,
+            }}
+          >
             {onSale && p.comparePrice && (
-              <span style={{ fontSize: 12, textDecoration: "line-through", color: "#aaa", fontWeight: 400 }}>
+              <span
+                style={{
+                  fontSize: 12,
+                  textDecoration: "line-through",
+                  color: "#aaa",
+                  fontWeight: 400,
+                }}
+              >
                 Rs{Number(p.comparePrice).toLocaleString("en-PK")}
               </span>
             )}
-            <span className="price fw-6" style={{ color: onSale ? "#e53e3e" : "#020042" }}>
+            <span
+              className="price fw-6"
+              style={{ color: onSale ? "#e53e3e" : "#020042" }}
+            >
               Rs{Number(p.price).toLocaleString("en-PK")}
             </span>
           </div>
@@ -116,15 +124,39 @@ function ProductCard({ p }: { p: Product }) {
   );
 }
 
-
 export default function TopTrending() {
   const [products, setProducts] = useState<Product[]>([]);
   const [hasMore, setHasMore] = useState(false);
+  const [activeTab, setActiveTab] = useState("LENS");
+  const [visible, setVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const sectionRef = useRef<HTMLElement>(null);
 
+  // Lazy load: fetch only when section scrolls into view
   useEffect(() => {
-    fetch("/api/store/products?limit=13")
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Fetch products once section is visible (or tab changes)
+  useEffect(() => {
+    if (!visible) return;
+    let ignore = false;
+    fetch(`/api/store/products?limit=13&productType=${activeTab}`)
       .then((r) => r.json())
       .then((data) => {
+        if (ignore) return;
         const list = Array.isArray(data.products) ? data.products : [];
         if (list.length > 12) {
           setHasMore(true);
@@ -134,32 +166,127 @@ export default function TopTrending() {
           setProducts(list);
         }
       })
-      .catch(console.error);
-  }, []);
+      .catch(console.error)
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [activeTab, visible]);
 
-  if (products.length === 0) return null;
+  // Don't hide if switching tabs — empty state shown inline below
 
   return (
-    <section className="flat-spacing-5">
+    <section className="flat-spacing-5" ref={sectionRef}>
       <div className="container">
         <div className="flat-animate-tab">
-          <div className="flat-title wow fadeInUp" data-wow-delay="0s">
+          <div
+            className="flat-title wow fadeInUp"
+            data-wow-delay="0s"
+            style={{ marginBottom: "15px" }}
+          >
             <span className="title fw-6">Top Trending</span>
             <p className="sub-title">
-              Discover our best-selling lenses, trusted for their comfort,
-              style, and superior quality!
+              Discover our best-selling items, trusted for their comfort, style,
+              and superior quality!
             </p>
           </div>
-          <div className="tab-content">
-            <div className="tab-pane active show" id="trending" role="tabpanel">
-              <div className="tf-grid-layout tf-col-2 md-col-3 lg-col-4 xl-col-4">
-                {products.map((p) => (
-                  <ProductCard key={p.id} p={p} />
-                ))}
+          <div
+            className="widget-tabs style-has-border widget-menu-tab mb-5"
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: "20px",
+              listStyle: "none",
+              paddingBottom: "20px",
+            }}
+          >
+            {(["LENS", "GLASSES"] as const).map((tab) => (
+              <div
+                key={tab}
+                className={`item-title ${activeTab === tab ? "active" : ""}`}
+                style={{
+                  cursor: "pointer",
+                  padding: "10px 20px",
+                  fontWeight: 600,
+                  borderBottom:
+                    activeTab === tab
+                      ? "2px solid #000"
+                      : "2px solid transparent",
+                }}
+                onClick={() => {
+                  setActiveTab(tab);
+                  if (tab !== activeTab) setLoading(true);
+                }}
+              >
+                <span className="inner">
+                  {tab === "LENS" ? "Lenses" : "Glasses"}
+                </span>
               </div>
-            </div>
+            ))}
           </div>
-          {hasMore && (
+
+          <div className="tab-content" style={{ minHeight: "300px" }}>
+            {loading ? (
+              <div className="tab-pane active show" role="tabpanel">
+                <div className="products-skeleton">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="skeleton-card">
+                      <div className="skeleton-img" />
+                      <div className="skeleton-body">
+                        <div className="skeleton-line" style={{ width: "40%" }} />
+                        <div className="skeleton-line" style={{ width: "80%" }} />
+                        <div className="skeleton-line" style={{ width: "60%" }} />
+                        <div
+                          className="skeleton-line"
+                          style={{ width: "35%", marginTop: "12px" }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : products.length === 0 ? (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "60px 20px",
+                  color: "#888",
+                }}
+              >
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🕶️</div>
+                <div
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: "#444",
+                    marginBottom: 6,
+                  }}
+                >
+                  {activeTab === "LENS"
+                    ? "No Lenses Available"
+                    : "No Glasses Available"}
+                </div>
+                <div style={{ fontSize: 13, color: "#aaa" }}>
+                  Check back soon — new products are coming!
+                </div>
+              </div>
+            ) : (
+              <div
+                className="tab-pane active show"
+                id="trending"
+                role="tabpanel"
+              >
+                <div className="tf-grid-layout tf-col-2 md-col-3 lg-col-4 xl-col-4">
+                  {products.map((p) => (
+                    <ProductCard key={p.id} p={p} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          {hasMore && !loading && (
             <div className="tf-pagination-wrap view-more-button text-center mt-5">
               <Link
                 href="/shop"
@@ -171,7 +298,7 @@ export default function TopTrending() {
                   color: "#fff",
                   display: "inline-block",
                   letterSpacing: "1px",
-                  textTransform: "uppercase"
+                  textTransform: "uppercase",
                 }}
               >
                 <span className="text">View All Products</span>

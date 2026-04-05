@@ -52,6 +52,7 @@ const productSchema = z.object({
   // Lens-specific — validated at runtime based on productType
   color: z.string().optional(),
   disposability: z.string().optional(),
+  productType: z.string().optional(),
 });
 type ProductErrors = Partial<
   Record<keyof z.infer<typeof productSchema>, string>
@@ -77,7 +78,7 @@ function ProductForm() {
     title: "",
     slug: "",
     description: "",
-    productType: "LENS", // "LENS" | "GLASSES"
+    productType: "", // "LENS" | "GLASSES" | "ACCESSORY"
     color: "",
     disposability: "ONE_DAY",
 
@@ -87,6 +88,7 @@ function ProductForm() {
     status: "ACTIVE",
     featured: false,
     inStock: true,
+    enableAddons: true,
     brandId: "",
     categoryId: "",
   });
@@ -145,7 +147,7 @@ function ProductForm() {
           title: p.title ?? "",
           slug: p.slug ?? "",
           description: p.description ?? "",
-          productType: p.productType ?? "LENS",
+          productType: p.productType ?? "",
           color: p.color ?? "",
           disposability: p.disposability ?? "ONE_DAY",
           price: p.price?.toString() ?? "",
@@ -154,6 +156,7 @@ function ProductForm() {
           status: p.status ?? "DRAFT",
           featured: p.featured ?? false,
           inStock: p.inStock ?? true,
+          enableAddons: p.enableAddons ?? true,
           brandId: p.brandId ?? "",
           categoryId: p.categoryId ?? "",
         });
@@ -188,6 +191,10 @@ function ProductForm() {
         if (!errs[key]) errs[key] = issue.message;
       }
     }
+    if (!form.productType) {
+      errs.productType = "Please select a product type";
+    }
+
     // Lens-specific required fields
     if (form.productType === "LENS") {
       if (!form.color) errs.color = "Color is required for lenses";
@@ -244,6 +251,7 @@ function ProductForm() {
         color: isLens && form.color ? form.color.toUpperCase() : null,
         images: finalImages,
         inStock: form.inStock,
+        enableAddons: form.enableAddons,
         stockCount: parseInt(form.stockCount || "0"),
         status: asDraft ? "DRAFT" : form.status,
         featured: form.featured,
@@ -434,7 +442,7 @@ function ProductForm() {
             >
               {/* ── Type toggle ── */}
               <Flex gap={2} mb={5}>
-                {(["LENS", "GLASSES"] as const).map((type) => {
+                {(["LENS", "GLASSES", "ACCESSORY"] as const).map((type) => {
                   const active = form.productType === type;
                   return (
                     <Box
@@ -456,11 +464,20 @@ function ProductForm() {
                       }}
                       onClick={() => set("productType", type)}
                     >
-                      {type === "LENS" ? "🔍 Lenses" : "👓 Glasses"}
+                      {type === "LENS"
+                        ? "🔍 Lenses"
+                        : type === "GLASSES"
+                        ? "👓 Glasses"
+                        : "👜 Accessory"}
                     </Box>
                   );
                 })}
               </Flex>
+              {fieldErrors.productType && (
+                <Text fontSize="11.5px" color={T.red} mt={-3} mb={4}>
+                  {fieldErrors.productType as string}
+                </Text>
+              )}
 
               <Grid templateColumns="1fr 1fr" gap={4}>
                 <FormField label="Brand" required>
@@ -593,6 +610,25 @@ function ProductForm() {
                   </>
                 )}
               </Grid>
+            </SectionCard>
+
+            <SectionCard title="Product Settings" subtitle="Options and features">
+              <Flex align="center" justify="space-between" mb={2}>
+                <Box>
+                  <Text fontSize="13px" fontWeight={600} color={T.text}>
+                    Enable Aftercare Add-ons
+                  </Text>
+                  <Text fontSize="12px" color={T.sub} mt={0.5}>
+                    Allow customers to select starter kits or solutions with this product
+                  </Text>
+                </Box>
+                  <input
+                    type="checkbox"
+                    style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                    checked={form.enableAddons as boolean}
+                    onChange={(e) => set("enableAddons", e.target.checked)}
+                  />
+              </Flex>
             </SectionCard>
 
             <SectionCard

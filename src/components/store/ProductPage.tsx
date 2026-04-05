@@ -22,10 +22,12 @@ type Product = {
   description: string | null;
   brand: { name: string; slug: string } | null;
   category: { name: string; slug: string } | null;
+  productType: "LENS" | "GLASSES" | "ACCESSORY";
   status: string;
   powerOptions: PowerOption[];
   reviews: { id: string; name: string; rating: number; heading: string | null; text: string | null; customerMeta: string | null; image: string | null; createdAt: string }[];
   _count: { reviews: number };
+  addons?: { id: string; name: string; extraCharge: number; retailPrice: number; }[];
 };
 
 const PLACEHOLDER = "/store/images/item/tets1.jpg";
@@ -58,6 +60,7 @@ export default function ProductPage({ slug }: { slug: string }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("Description");
+  const [selectedAddonId, setSelectedAddonId] = useState<string>("none");
 
   // Review form state
   const { data: session } = useSession();
@@ -256,6 +259,8 @@ export default function ProductPage({ slug }: { slug: string }) {
   const handleAddToCart = () => {
     const power = lensType === "EYESIGHT" ? `L:${leftEye} R:${rightEye}` : null;
     for (let i = 0; i < qty; i++) {
+      const selectedAddon = product.addons ? product.addons.find((a) => a.id === selectedAddonId) : null;
+
       const itemToInsert = {
         slug: product.slug,
         title: product.title,
@@ -265,8 +270,8 @@ export default function ProductPage({ slug }: { slug: string }) {
         lensType,
         power,
         prescriptionName: prescriptionFile?.name ?? null,
-        addonName: "",
-        addonPrice: 0,
+        addonName: selectedAddon ? selectedAddon.name : "",
+        addonPrice: selectedAddon ? selectedAddon.extraCharge : 0,
         unitPrice: product.price,
       };
 
@@ -336,9 +341,9 @@ export default function ProductPage({ slug }: { slug: string }) {
       <section className="flat-spacing-4 pt_0">
         <div className="tf-main-product section-image-zoom">
           <div className="container">
-            <div className="row">
+            <div className="row align-items-start">
               {/* Left Column: Images */}
-              <div className="col-md-5 col-lg-6">
+              <div className="col-12 col-md-7 col-lg-6">
                 <div
                   className="tf-product-media-wrap sticky-top"
                   style={{ position: "relative" }}
@@ -430,12 +435,9 @@ export default function ProductPage({ slug }: { slug: string }) {
               </div>
 
               {/* Right Column: Info */}
-              <div className="col-md-6 col-lg-6">
-                <div className="tf-product-info-wrap position-relative">
-                  <div
-                    className="tf-product-info-list"
-                    style={{ marginTop: 20 }}
-                  >
+              <div className="col-12 col-md-5 col-lg-6">
+                <div className="tf-product-info-wrap position-relative product-info-sticky">
+                  <div className="tf-product-info-list">
                     <div className="tf-product-info-title">
                       <h2>{product.title}</h2>
                     </div>
@@ -517,7 +519,9 @@ export default function ProductPage({ slug }: { slug: string }) {
                     <hr className="my-4" />
 
                     {/* ── Lens Type ── */}
-                    <div style={{ marginBottom: 16 }}>
+                    {product.productType !== "GLASSES" && (
+                      <>
+                      <div style={{ marginBottom: 16 }}>
                       <div
                         style={{
                           fontSize: 13,
@@ -728,6 +732,7 @@ export default function ProductPage({ slug }: { slug: string }) {
                         </div>
 
                         {/* OR divider */}
+                        
                         <div
                           style={{
                             display: "flex",
@@ -940,6 +945,64 @@ export default function ProductPage({ slug }: { slug: string }) {
                         </div>
                       </div>
                     </div>
+                      </>
+                    )}
+
+                    {/* ── Aftercare Addons ── */}
+                    {product.productType !== "GLASSES" && (
+                      <div style={{ marginBottom: 20, marginTop: 8 }}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: "#333",
+                            marginBottom: 10,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
+                          }}
+                        >
+                          Choose an Aftercare Solution <span style={{ color: "#e53e3e" }}>*</span>
+                        </div>
+                        {!product.addons || product.addons.length === 0 ? (
+                          <div style={{ fontSize: 13, color: "#888", fontStyle: "italic" }}>
+                            No aftercare solutions available.
+                          </div>
+                        ) : (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 15 }}>
+                              <input
+                                type="radio"
+                                name="aftercare"
+                                checked={selectedAddonId === "none"}
+                                onChange={() => setSelectedAddonId("none")}
+                                style={{ accentColor: "var(--primary, #0d1b4b)", cursor: "pointer", width: 16, height: 16 }}
+                              />
+                              <span style={{ fontWeight: 600, color: "#333" }}>None</span>
+                            </label>
+                            {product.addons.map((a) => (
+                              <label key={a.id} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 15 }}>
+                                <input
+                                  type="radio"
+                                  name="aftercare"
+                                  checked={selectedAddonId === a.id}
+                                  onChange={() => setSelectedAddonId(a.id)}
+                                  style={{ accentColor: "var(--primary, #0d1b4b)", cursor: "pointer", width: 16, height: 16 }}
+                                />
+                                <span style={{ fontWeight: 600, color: "#333" }}>
+                                  {a.name}
+                                  <span style={{ color: "#888", textDecoration: "line-through", fontSize: 14, marginLeft: 6 }}>
+                                    Rs{a.retailPrice}
+                                  </span>
+                                  <span style={{ fontWeight: 700, color: "#222", fontSize: 14, marginLeft: 6 }}>
+                                    [+Rs{a.extraCharge}]
+                                  </span>
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <div
                       className="tf-product-info-quantity"
@@ -978,7 +1041,11 @@ export default function ProductPage({ slug }: { slug: string }) {
                       >
                         <span>Add to cart -&nbsp;</span>
                         <span className="tf-qty-price total-price">
-                          Rs{(product.price * qty).toLocaleString("en-PK")}
+                          {(() => {
+                            const addon = product.addons ? product.addons.find((a) => a.id === selectedAddonId) : null;
+                            const addonPrice = addon ? addon.extraCharge : 0;
+                            return `Rs${((product.price + addonPrice) * qty).toLocaleString("en-PK")}`;
+                          })()}
                         </span>
                       </button>
                     </div>

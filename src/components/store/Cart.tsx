@@ -4,13 +4,14 @@ import Link from "next/link";
 import { useCartStore } from "@/store/cartStore";
 import { useStoreSettings } from "@/components/store/StoreProvider";
 import { useSession } from "next-auth/react";
-import toast from "react-hot-toast";
+
 
 export default function Cart() {
   const { data: session } = useSession();
   const { items, removeItem, updateQty, subtotal } = useCartStore();
   const { free_shipping_threshold } = useStoreSettings();
   const [agreed, setAgreed] = useState(false);
+  const [showAgreeError, setShowAgreeError] = useState(false);
 
   const FREE_SHIPPING_THRESHOLD = free_shipping_threshold;
   const sub = subtotal();
@@ -189,32 +190,31 @@ export default function Cart() {
                                 >
                                   {item.title}
                                 </Link>
-                                <div className="cart-meta-variant">
-                                  {item.color && <span>{item.color}</span>}
+                                <div className="cart-meta-variant" style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 4 }}>
+                                  {/* Lens Type */}
                                   {item.lensType && (
-                                    <span>
-                                      {" / "}
-                                      {item.lensType === "PLAIN"
-                                        ? "Plan (No Power)"
-                                        : "Eyesight"}
+                                    <span style={{ fontSize: 12, color: "#666" }}>
+                                      <span style={{ fontWeight: 600, color: "#444" }}>Lens: </span>
+                                      {item.lensType === "PLAIN" ? "Plan (No Power)" : "Eyesight"}
                                     </span>
                                   )}
-                                  {item.lensType === "EYESIGHT" &&
-                                    item.power && (
-                                      <span>{" / " + item.power}</span>
-                                    )}
-                                  {item.addonName && (
-                                    <span>{" / " + item.addonName}</span>
+                                  {/* Eye Power */}
+                                  {item.lensType === "EYESIGHT" && item.power && (
+                                    <span style={{ fontSize: 12, color: "#666" }}>
+                                      <span style={{ fontWeight: 600, color: "#444" }}>Power: </span>
+                                      {item.power.replace("L:", "Left: ").replace("R:", " | Right: ")}
+                                    </span>
                                   )}
+                                  {/* Addon */}
+                                  {item.addonName && (
+                                    <span style={{ fontSize: 12, color: "#666" }}>
+                                      <span style={{ fontWeight: 600, color: "#444" }}>Aftercare: </span>
+                                      {item.addonName}
+                                    </span>
+                                  )}
+                                  {/* Prescription */}
                                   {item.prescriptionName && (
-                                    <span
-                                      style={{
-                                        display: "block",
-                                        fontSize: 11,
-                                        color: "#888",
-                                        marginTop: 2,
-                                      }}
-                                    >
+                                    <span style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
                                       📎 {item.prescriptionName}
                                     </span>
                                   )}
@@ -387,22 +387,34 @@ export default function Cart() {
                       </p>
 
                       {/* Agree */}
-                      <div className="cart-checkbox mb-3 d-flex align-items-center gap-2">
+                      <div className="cart-checkbox mb-1 d-flex align-items-center gap-2">
                         <input
                           type="checkbox"
                           className="tf-check"
                           id="check-agree"
                           checked={agreed}
-                          onChange={(e) => setAgreed(e.target.checked)}
-                          style={{ margin: 0, width: "16px", height: "16px", flexShrink: 0 }}
+                          onChange={(e) => {
+                            setAgreed(e.target.checked);
+                            if (e.target.checked) setShowAgreeError(false);
+                          }}
+                          style={{
+                            margin: 0, width: "16px", height: "16px", flexShrink: 0,
+                            outline: showAgreeError ? "2px solid #e53e3e" : undefined,
+                            accentColor: showAgreeError ? "#e53e3e" : undefined,
+                          }}
                         />
-                        <label htmlFor="check-agree" className="fw-4 mb-0 d-flex align-items-center" style={{ gap: "4px" }}>
+                        <label htmlFor="check-agree" className="fw-4 mb-0 d-flex align-items-center" style={{ gap: "4px", color: showAgreeError ? "#e53e3e" : undefined }}>
                           I agree with the{" "}
-                          <Link href="/terms-conditions" className="text-decoration-underline" style={{ color: "black", fontWeight: 600 }}>
+                          <Link href="/terms-conditions" className="text-decoration-underline" style={{ color: showAgreeError ? "#e53e3e" : "black", fontWeight: 600 }}>
                             terms and conditions
                           </Link>
                         </label>
                       </div>
+                      {showAgreeError && (
+                        <p style={{ color: "#e53e3e", fontSize: 12, marginBottom: 8, marginTop: 2 }}>
+                          ⚠ Please agree to the terms and conditions to proceed.
+                        </p>
+                      )}
 
                       {/* Checkout */}
                       <div className="cart-checkout-btn">
@@ -413,7 +425,7 @@ export default function Cart() {
                             onClick={(e) => {
                               if (!agreed) {
                                 e.preventDefault();
-                                toast.error("You must agree to the terms and conditions to check out");
+                                setShowAgreeError(true);
                               }
                             }}
                           >
@@ -427,7 +439,7 @@ export default function Cart() {
                             onClick={(e) => {
                               if (!agreed) {
                                 e.preventDefault();
-                                toast.error("You must agree to the terms and conditions to check out");
+                                setShowAgreeError(true);
                               }
                             }}
                           >

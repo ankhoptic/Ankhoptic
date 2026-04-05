@@ -20,6 +20,7 @@ type ProductItem = {
   featured: boolean;
   brand: { name: string; slug: string } | null;
   category: { name: string; slug: string } | null;
+  productType: "LENS" | "GLASSES" | "ACCESSORY";
   _count: { reviews: number };
 };
 
@@ -60,6 +61,7 @@ export default function Products() {
   const colorParam = searchParams.get("color") ?? "";
   const disposabilityParam = searchParams.get("disposability") ?? "";
   const categoryParam = searchParams.get("category") ?? "";
+  const productTypeParam = searchParams.get("productType") ?? "";
   const tagParam = searchParams.get("tag") ?? "";
   const searchParam = searchParams.get("search") ?? "";
 
@@ -139,6 +141,7 @@ export default function Products() {
       if (colorParam) params.set("color", colorParam);
       if (disposabilityParam) params.set("disposability", disposabilityParam);
       if (categoryParam) params.set("category", categoryParam);
+      if (productTypeParam) params.set("productType", productTypeParam);
       if (tagParam) params.set("tag", tagParam);
       if (searchParam) params.set("search", searchParam);
       params.set("page", String(pg));
@@ -175,6 +178,7 @@ export default function Products() {
       colorParam,
       disposabilityParam,
       categoryParam,
+      productTypeParam,
       tagParam,
       searchParam,
       sort,
@@ -413,7 +417,7 @@ export default function Products() {
       )}
 
       {/* Disposability filter */}
-      {disposabilities.length > 0 && (
+      {disposabilities.length > 0 && productTypeParam !== "GLASSES" && (
         <div className="sidebar-widget">
           <div className="sidebar-widget-title">Disposability</div>
           <ul className="sidebar-filter-list">
@@ -961,32 +965,6 @@ export default function Products() {
         }
         .products-empty h3 { font-size: 18px; color: #333; margin: 0 0 8px; }
         .products-empty p { font-size: 14px; margin: 0 0 20px; }
-
-        /* ── Loading skeleton ── */
-        .products-skeleton {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-          gap: 20px;
-        }
-        @media (max-width: 480px) { .products-skeleton { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
-        .skeleton-card {
-          border-radius: 14px;
-          overflow: hidden;
-          background: #fff;
-          border: 1px solid #eee;
-        }
-        .skeleton-img { aspect-ratio: 1; background: #f0f0f0; }
-        .skeleton-body { padding: 14px; }
-        .skeleton-line {
-          height: 12px;
-          border-radius: 6px;
-          background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-          background-size: 200% 100%;
-          animation: shimmer 1.5s infinite;
-          margin-bottom: 8px;
-        }
-        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-
         /* ── Pagination ── */
         .products-pagination {
           display: flex;

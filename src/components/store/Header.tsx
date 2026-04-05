@@ -21,16 +21,53 @@ export default function Header() {
   const { data: session } = useSession();
   const router = useRouter();
   const [logo, setLogo] = useState(DEFAULT_LOGO);
-  const [brands, setBrands] = useState<Brand[]>([]);
+  const [lensBrands, setLensBrands] = useState<Brand[]>([]);
+  const [glassesBrands, setGlassesBrands] = useState<Brand[]>([]);
   const [activeBrand, setActiveBrand] = useState<string>("");
+  const [activeGlassesBrand, setActiveGlassesBrand] = useState<string>("");
   const [showLensMenu, setShowLensMenu] = useState(false);
+  const [showGlassesMenu, setShowGlassesMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [colors, setColors] = useState<string[]>([]);
-  const [modalities, setModalities] = useState<{label: string, value: string}[]>([]);
+  const [modalities, setModalities] = useState<
+    { label: string; value: string }[]
+  >([]);
 
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollTop, setLastScrollTop] = useState(0);
   const [mounted, setMounted] = useState(false);
+
   const items = useCartStore((state) => state.items);
   const cartCount = items.reduce((sum, item) => sum + item.qty, 0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const st = window.pageYOffset || document.documentElement.scrollTop;
+      const threshold = 0; // Lower threshold to hide on "one scroll"
+      const delta = 5;
+
+      if (st > threshold) {
+        if (st > lastScrollTop + delta) {
+          // Scrolling Down - hide immediately
+          setIsVisible(false);
+        } else if (st < lastScrollTop - delta) {
+          // Scrolling Up - show with background
+          setIsVisible(true);
+          setIsScrolled(true);
+        }
+      } else {
+        // At the very top
+        setIsVisible(true);
+        setIsScrolled(false);
+      }
+
+      setLastScrollTop(st <= 0 ? 0 : st);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollTop]);
 
   useEffect(() => {
     const timer = setTimeout(() => setMounted(true), 0);
@@ -39,17 +76,32 @@ export default function Header() {
 
   // Fetch brands + their categories from DB
   useEffect(() => {
-    fetch("/api/store/brands")
+    fetch("/api/store/brands?type=LENS")
       .then((r) => r.json())
       .then((data: Brand[]) => {
-        setBrands(data);
-        if (data.length > 0) setActiveBrand(data[0].name);
+        setLensBrands(data);
+        if (data.length > 0) {
+          setActiveBrand(data[0].name);
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/store/brands?type=GLASSES")
+      .then((r) => r.json())
+      .then((data: Brand[]) => {
+        setGlassesBrands(data);
+        if (data.length > 0) {
+          setActiveGlassesBrand(data[0].name);
+        }
       })
       .catch(() => {});
   }, []);
 
   const activeBrandData =
-    brands.find((b) => b.name === activeBrand) ?? brands[0];
+    lensBrands.find((b) => b.name === activeBrand) ?? lensBrands[0];
+
+  const activeGlassesBrandData =
+    glassesBrands.find((b) => b.name === activeGlassesBrand) ?? glassesBrands[0];
 
   useEffect(() => {
     fetch("/api/settings/store")
@@ -71,7 +123,17 @@ export default function Header() {
 
   return (
     <>
-      <header id="header" className="header-default">
+      <header
+        id="header"
+        className={`header-default ${isScrolled ? "header-bg" : ""}`}
+        style={{
+          position: "fixed",
+          top: isVisible ? "0" : "-120px",
+          transition: "all 0.3s ease-in-out",
+          width: "100%",
+          zIndex: 1000,
+        }}
+      >
         <div className="container-full px_15 lg-px_40">
           <div className="row wrapper-header align-items-center">
             <div className="col-md-4 col-3 tf-lg-hidden">
@@ -116,9 +178,9 @@ export default function Header() {
                     onMouseEnter={() => setShowLensMenu(true)}
                     onMouseLeave={() => setShowLensMenu(false)}
                   >
-                    <a href="#" className="item-link">
+                    <Link href="/shop" className="item-link">
                       Lenses <i className="icon icon-arrow-down" />
-                    </a>
+                    </Link>
                     <div
                       className="sub-menu"
                       style={{
@@ -160,7 +222,7 @@ export default function Header() {
                         <ul
                           style={{ listStyle: "none", margin: 0, padding: 0 }}
                         >
-                          {brands.map((brand) => (
+                          {lensBrands.map((brand) => (
                             <li
                               key={brand.id}
                               onMouseEnter={() => setActiveBrand(brand.name)}
@@ -340,11 +402,242 @@ export default function Header() {
                     </div>
                   </li>
 
+                  {/* Glasses - Mega Menu */}
+                  <li
+                    style={{ position: "relative" }}
+                    className="menu-item"
+                    onMouseEnter={() => setShowGlassesMenu(true)}
+                    onMouseLeave={() => setShowGlassesMenu(false)}
+                  >
+                    <Link href="/shop" className="item-link">
+                      Glasses <i className="icon icon-arrow-down" />
+                    </Link>
+                    <div
+                      className="sub-menu"
+                      style={{
+                        position: "absolute",
+                        top: "100%",
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        width: "600px",
+                        background: "#fff",
+                        boxShadow: "0 8px 40px rgba(0,0,0,0.13)",
+                        borderRadius: "12px",
+                        padding: "24px",
+                        display: showGlassesMenu ? "flex" : "none",
+                        gap: "0",
+                        zIndex: 9999,
+                      }}
+                    >
+                      {/* Column 1: Brand List */}
+                      <div
+                        style={{
+                          width: "170px",
+                          flexShrink: 0,
+                          borderRight: "1px solid #f0f0f0",
+                          paddingRight: "16px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: "700",
+                            color: "#aaa",
+                            letterSpacing: "1px",
+                            marginBottom: "12px",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          Brands
+                        </div>
+                        <ul
+                          style={{ listStyle: "none", margin: 0, padding: 0 }}
+                        >
+                          {glassesBrands.map((brand) => (
+                            <li
+                              key={brand.id}
+                              onMouseEnter={() => setActiveGlassesBrand(brand.name)}
+                              style={{ marginBottom: "4px" }}
+                            >
+                              <Link
+                                href={`/shop?brand=${brand.slug}&productType=GLASSES`}
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  padding: "6px 10px",
+                                  borderRadius: "6px",
+                                  fontSize: "13px",
+                                  fontWeight:
+                                    activeGlassesBrand === brand.name ? "700" : "400",
+                                  color:
+                                    activeGlassesBrand === brand.name
+                                      ? "#020042"
+                                      : "#444",
+                                  background:
+                                    activeGlassesBrand === brand.name
+                                      ? "#f5f5f5"
+                                      : "transparent",
+                                  textDecoration: "none",
+                                  transition: "all 0.15s",
+                                }}
+                              >
+                                {brand.name}
+                                {activeGlassesBrand === brand.name && (
+                                  <span style={{ fontSize: "10px" }}>›</span>
+                                )}
+                              </Link>
+                            </li>
+                          ))}
+                          <li
+                            style={{
+                              marginTop: "10px",
+                              borderTop: "1px solid #f0f0f0",
+                              paddingTop: "10px",
+                            }}
+                          >
+                            <Link
+                              href="/shop?productType=GLASSES"
+                              style={{
+                                fontSize: "12px",
+                                fontWeight: "700",
+                                color: "var(--primary, #000)",
+                                textDecoration: "none",
+                                letterSpacing: "0.5px",
+                              }}
+                            >
+                              EXPLORE ALL →
+                            </Link>
+                          </li>
+                        </ul>
+                      </div>
+
+                      {/* Column 2: Categories */}
+                      <div
+                        style={{
+                          flex: 1,
+                          paddingLeft: "20px",
+                          paddingRight: "20px",
+                          borderRight: "1px solid #f0f0f0",
+                        }}
+                      >
+                        {activeGlassesBrandData && (
+                          <div
+                            style={{
+                              fontSize: "11px",
+                              fontWeight: "700",
+                              color: "#aaa",
+                              letterSpacing: "1px",
+                              marginBottom: "12px",
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            {activeGlassesBrandData.name}
+                          </div>
+                        )}
+                        <ul
+                          style={{
+                            listStyle: "none",
+                            margin: 0,
+                            padding: 0,
+                            columns:
+                              activeGlassesBrandData &&
+                              activeGlassesBrandData.categories.length > 6
+                                ? 2
+                                : 1,
+                            columnGap: "16px",
+                          }}
+                        >
+                          {activeGlassesBrandData?.categories.map((cat) => (
+                            <li
+                              key={cat.id}
+                              style={{
+                                marginBottom: "6px",
+                                breakInside: "avoid",
+                              }}
+                            >
+                              <Link
+                                href={`/shop?brand=${activeGlassesBrandData.slug}&category=${cat.slug}&productType=GLASSES`}
+                                style={{
+                                  fontSize: "13px",
+                                  color: "#444",
+                                  textDecoration: "none",
+                                  display: "block",
+                                  padding: "3px 0",
+                                }}
+                              >
+                                {cat.name}
+                              </Link>
+                            </li>
+                          ))}
+                          {(!activeGlassesBrandData ||
+                            activeGlassesBrandData.categories.length === 0) && (
+                            <li style={{ color: "#bbb", fontSize: "13px" }}>
+                              No collections yet
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+
+                      {/* Column 3: Brand Image / Logo */}
+                      <div
+                        style={{
+                          width: "180px",
+                          flexShrink: 0,
+                          paddingLeft: "20px",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {activeGlassesBrandData?.logo ? (
+                          <img
+                            src={activeGlassesBrandData.logo}
+                            alt={activeGlassesBrandData.name}
+                            style={{
+                              width: "150px",
+                              height: "150px",
+                              objectFit: "contain",
+                              borderRadius: "10px",
+                              background: "#f8f8f8",
+                              padding: "12px",
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: "150px",
+                              height: "150px",
+                              background: "#f8f8f8",
+                              borderRadius: "10px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              textAlign: "center",
+                              padding: "12px",
+                            }}
+                          >
+                            <span
+                              style={{
+                                color: "#999",
+                                fontSize: "13px",
+                                fontWeight: "600",
+                              }}
+                            >
+                              {activeGlassesBrandData?.name}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+
                   {/* Shop By Color */}
                   <li className="menu-item position-relative">
-                    <a href="#" className="item-link">
+                    <Link href="/shop" className="item-link">
                       Shop By Color <i className="icon icon-arrow-down" />
-                    </a>
+                    </Link>
                     <div
                       className="sub-menu submenu-default"
                       style={{
@@ -394,7 +687,11 @@ export default function Header() {
                           <li>
                             <span
                               className="menu-link-text w-100 text-center"
-                              style={{ display: "block", padding: "10px 20px", color: "#aaa" }}
+                              style={{
+                                display: "block",
+                                padding: "10px 20px",
+                                color: "#aaa",
+                              }}
                             >
                               Loading...
                             </span>
@@ -406,10 +703,10 @@ export default function Header() {
 
                   {/* Shop by Disposability */}
                   <li className="menu-item position-relative">
-                    <a href="#" className="item-link">
+                    <Link href="/shop" className="item-link">
                       Shop by Disposability{" "}
                       <i className="icon icon-arrow-down" />
-                    </a>
+                    </Link>
                     <div
                       className="sub-menu submenu-default"
                       style={{
@@ -434,7 +731,11 @@ export default function Header() {
                           <li>
                             <span
                               className="menu-link-text w-100 text-center"
-                              style={{ display: "block", padding: "10px 20px", color: "#aaa" }}
+                              style={{
+                                display: "block",
+                                padding: "10px 20px",
+                                color: "#aaa",
+                              }}
                             >
                               Loading...
                             </span>
@@ -731,8 +1032,8 @@ export default function Header() {
                 </a>
                 <div id="mb-lenses" className="collapse">
                   <ul className="sub-nav-menu" id="sub-menu-lenses">
-                    {brands.length > 0 ? (
-                      brands.map((brand) => (
+                    {lensBrands.length > 0 ? (
+                      lensBrands.map((brand) => (
                         <li key={brand.id}>
                           {brand.categories.length > 0 ? (
                             <>
@@ -828,6 +1129,127 @@ export default function Header() {
                     <li>
                       <Link
                         href="/shop"
+                        className="sub-nav-link"
+                        style={{ fontWeight: 600 }}
+                      >
+                        Explore All →
+                      </Link>
+                    </li>
+                  </ul>
+                </div>
+              </li>
+
+              {/* Glasses */}
+              <li className="nav-mb-item">
+                <a
+                  href="#mb-glasses"
+                  className="collapsed mb-menu-link"
+                  data-bs-toggle="collapse"
+                  aria-expanded="false"
+                  aria-controls="mb-glasses"
+                >
+                  <span>Glasses</span>
+                  <span className="btn-open-sub" />
+                </a>
+                <div id="mb-glasses" className="collapse">
+                  <ul className="sub-nav-menu" id="sub-menu-glasses">
+                    {glassesBrands.length > 0 ? (
+                      glassesBrands.map((brand) => (
+                        <li key={brand.id}>
+                          {brand.categories.length > 0 ? (
+                            <>
+                              <a
+                                href={`#mb-glasses-brand-${brand.id}`}
+                                className="sub-nav-link collapsed"
+                                data-bs-toggle="collapse"
+                                aria-expanded="false"
+                                aria-controls={`mb-glasses-brand-${brand.id}`}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "10px",
+                                }}
+                              >
+                                {brand.logo ? (
+                                  <img
+                                    src={brand.logo}
+                                    alt={brand.name}
+                                    style={{
+                                      width: "32px",
+                                      height: "32px",
+                                      objectFit: "contain",
+                                      borderRadius: "6px",
+                                      background: "#f5f5f5",
+                                      padding: "3px",
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                ) : (
+                                  <span
+                                    style={{
+                                      width: "32px",
+                                      height: "32px",
+                                      background: "#eee",
+                                      borderRadius: "6px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      fontSize: "11px",
+                                      fontWeight: 700,
+                                      color: "#888",
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    {brand.name.charAt(0)}
+                                  </span>
+                                )}
+                                <span>{brand.name}</span>
+                                <span
+                                  className="btn-open-sub"
+                                  style={{ marginLeft: "auto" }}
+                                />
+                              </a>
+                              <div
+                                id={`mb-glasses-brand-${brand.id}`}
+                                className="collapse"
+                              >
+                                <ul className="sub-nav-menu sub-menu-level-2">
+                                  {brand.categories.map((cat) => (
+                                    <li key={cat.id}>
+                                      <Link
+                                        href={`/shop?brand=${brand.slug}&category=${cat.slug}&productType=GLASSES`}
+                                        className="sub-nav-link"
+                                      >
+                                        {cat.name}
+                                      </Link>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </>
+                          ) : (
+                            <Link
+                              href={`/shop?brand=${brand.slug}&productType=GLASSES`}
+                              className="sub-nav-link"
+                            >
+                              {brand.name}
+                            </Link>
+                          )}
+                        </li>
+                      ))
+                    ) : (
+                      <li>
+                        <span
+                          className="sub-nav-link"
+                          style={{ color: "#aaa" }}
+                        >
+                          Loading...
+                        </span>
+                      </li>
+                    )}
+                    <li>
+                      <Link
+                        href="/shop?productType=GLASSES"
                         className="sub-nav-link"
                         style={{ fontWeight: 600 }}
                       >
@@ -944,9 +1366,9 @@ export default function Header() {
 
             <div className="mb-other-content">
               <div className="d-flex group-icon">
-                <a href="/wishlist" className="site-nav-icon">
+                <Link href="/wishlist" className="site-nav-icon">
                   <i className="icon icon-heart" /> Wishlist
-                </a>
+                </Link>
                 <a
                   href="#canvasSearch"
                   data-bs-toggle="offcanvas"
@@ -957,17 +1379,58 @@ export default function Header() {
                 </a>
               </div>
               <div className="mb-notice">
-                <a href="/contact" className="text-need">
+                <Link href="/contact" className="text-need">
                   Need help?
-                </a>
+                </Link>
               </div>
             </div>
           </div>
 
           <div className="mb-bottom">
-            <a href="#login" data-bs-toggle="modal" className="site-nav-icon">
-              <i className="icon icon-account" /> Login
-            </a>
+            {session ? (
+              <div className="d-flex align-items-center gap-10 px-4 py-3 border-top">
+                <div
+                  className="d-flex align-items-center justify-content-center"
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: "50%",
+                    background: "var(--theme-color, #020042)",
+                    color: "#fff",
+                    fontWeight: 600,
+                    fontSize: "14px",
+                  }}
+                >
+                  {session.user?.name?.charAt(0).toUpperCase() || "U"}
+                </div>
+                <div>
+                  <div style={{ fontSize: "14px", fontWeight: 600 }}>
+                    {session.user?.name}
+                  </div>
+                  <Link
+                    href="/dashboard"
+                    className="text-primary"
+                    style={{ fontSize: "12px" }}
+                  >
+                    View Account
+                  </Link>
+                </div>
+                <button
+                  onClick={async () => {
+                    await signOut({ redirect: false });
+                    router.push("/");
+                  }}
+                  className="ms-auto btn-icon-action"
+                  style={{ border: "none", background: "transparent" }}
+                >
+                  <i className="icon icon-close" />
+                </button>
+              </div>
+            ) : (
+              <a href="#login" data-bs-toggle="modal" className="site-nav-icon">
+                <i className="icon icon-account" /> Login
+              </a>
+            )}
           </div>
         </div>
       </div>

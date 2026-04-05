@@ -5,7 +5,7 @@ import { useCartStore } from "@/store/cartStore";
 import { useStoreSettings } from "@/components/store/StoreProvider";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import toast from "react-hot-toast";
+
 
 export default function Cart() {
   const { data: session } = useSession();
@@ -13,6 +13,7 @@ export default function Cart() {
   const { free_shipping_threshold } = useStoreSettings();
   const router = useRouter();
   const [agreed, setAgreed] = useState(false);
+  const [showAgreeError, setShowAgreeError] = useState(false);
 
   const FREE_SHIPPING_THRESHOLD = free_shipping_threshold;
   const sub = subtotal();
@@ -34,8 +35,29 @@ export default function Cart() {
       >
         <div className="modal-dialog">
           <div className="modal-content">
-            <div className="header">
-              <div className="title fw-5">Shopping Cart</div>
+            <div className="header" style={{ borderBottom: "2px solid #f0f0f0", paddingBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 18, fontWeight: 700, color: "#0d1b4b", letterSpacing: "-0.3px" }}>
+                  Shopping Cart
+                </span>
+                {items.length > 0 && (
+                  <span style={{
+                    background: "#0d1b4b",
+                    color: "#fff",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    borderRadius: "50%",
+                    width: 20,
+                    height: 20,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}>
+                    {items.reduce((s, i) => s + i.qty, 0)}
+                  </span>
+                )}
+              </div>
               <span
                 className="icon-close icon-close-popup"
                 data-bs-dismiss="modal"
@@ -182,6 +204,7 @@ export default function Cart() {
                                     color: "#666",
                                   }}
                                 >
+                                  <span style={{ fontWeight: 600, color: "#444" }}>Lens: </span>
                                   {item.lensType === "PLAIN"
                                     ? "Plan (No Power)"
                                     : "Eyesight"}
@@ -221,6 +244,7 @@ export default function Cart() {
                                       color: "#666",
                                     }}
                                   >
+                                    <span style={{ fontWeight: 600, color: "#444" }}>Aftercare: </span>
                                     {item.addonName}
                                   </span>
                                 )}
@@ -262,7 +286,7 @@ export default function Cart() {
                                 </div>
                                 <div
                                   className="tf-mini-cart-remove"
-                                  onClick={() => removeItem(item.id)}
+                                  onClick={() => setTimeout(() => removeItem(item.id), 0)}
                                   style={{ cursor: "pointer" }}
                                 >
                                   Remove
@@ -292,26 +316,37 @@ export default function Cart() {
                       <div className="tf-mini-cart-line" />
 
                       {/* Agree Checkbox */}
-                      <div className="cart-checkbox mb-3 mt-3 d-flex align-items-center gap-2">
+                      <div className="cart-checkbox mb-1 mt-3 d-flex align-items-center gap-2">
                         <input
                           type="checkbox"
                           className="tf-check"
                           id="mini-check-agree"
                           checked={agreed}
-                          onChange={(e) => setAgreed(e.target.checked)}
-                          style={{ margin: 0, width: "16px", height: "16px", flexShrink: 0 }}
+                          onChange={(e) => {
+                            setAgreed(e.target.checked);
+                            if (e.target.checked) setShowAgreeError(false);
+                          }}
+                          style={{
+                            margin: 0, width: "16px", height: "16px", flexShrink: 0,
+                            outline: showAgreeError ? "2px solid #e53e3e" : undefined,
+                          }}
                         />
                         <label
                           htmlFor="mini-check-agree"
                           className="fw-4 mb-0 d-flex align-items-center"
-                          style={{ gap: "4px" }}
+                          style={{ gap: "4px", color: showAgreeError ? "#e53e3e" : undefined }}
                         >
                           I agree with the{" "}
-                          <Link href="/terms-conditions" className="text-decoration-underline" style={{ color: "black", fontWeight: 600 }}>
+                          <Link href="/terms-conditions" className="text-decoration-underline" style={{ color: showAgreeError ? "#e53e3e" : "black", fontWeight: 600 }}>
                             terms and conditions
                           </Link>
                         </label>
                       </div>
+                      {showAgreeError && (
+                        <p style={{ color: "#e53e3e", fontSize: 12, marginBottom: 8, marginTop: 2 }}>
+                          ⚠ Please agree to the terms and conditions to proceed.
+                        </p>
+                      )}
 
                       <div className="tf-mini-cart-view-checkout">
                         <button
@@ -327,14 +362,11 @@ export default function Cart() {
                         </button>
                         {session ? (
                           <button
-                            data-bs-dismiss={agreed ? "modal" : undefined}
                             onClick={(e) => {
                               if (!agreed) {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                toast.error(
-                                  "You must agree to the terms and conditions to check out",
-                                );
+                                setShowAgreeError(true);
                                 return;
                               }
                               setTimeout(() => {
@@ -354,9 +386,7 @@ export default function Cart() {
                               if (!agreed) {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                toast.error(
-                                  "You must agree to the terms and conditions to check out",
-                                );
+                                setShowAgreeError(true);
                               }
                             }}
                             className="tf-btn btn-fill animate-hover-btn radius-3 w-100 justify-content-center"

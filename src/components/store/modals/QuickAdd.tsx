@@ -61,16 +61,21 @@ export default function QuickAdd() {
     }, 150);
   };
 
-  // Power options fetched from full product API
+  // Power options + addons fetched from full product API
+  type AddonItem = { id: string; name: string; extraCharge: number; retailPrice: number };
   const [powerOptions, setPowerOptions] = useState<PowerOption[]>([]);
+  const [addons, setAddons] = useState<AddonItem[]>([]);
+  const [selectedAddonId, setSelectedAddonId] = useState<string>("none");
   const prevSlug = useRef<string | null>(null);
 
-  // Fetch powerOptions whenever product changes
+  // Fetch powerOptions + addons whenever product changes
   useEffect(() => {
     if (!product?.slug || product.slug === prevSlug.current) return;
     prevSlug.current = product.slug;
     // eslint-disable-next-line
     setPowerOptions([]);
+    setAddons([]);
+    setSelectedAddonId("none");
     setLensType("PLAIN");
     setLeftEye("0.00");
     setRightEye("0.00");
@@ -83,9 +88,8 @@ export default function QuickAdd() {
     fetch(`/api/store/products/${product.slug}`)
       .then((r) => r.json())
       .then((data) => {
-        if (Array.isArray(data.powerOptions)) {
-          setPowerOptions(data.powerOptions);
-        }
+        if (Array.isArray(data.powerOptions)) setPowerOptions(data.powerOptions);
+        if (Array.isArray(data.addons)) setAddons(data.addons);
       })
       .catch(console.error);
   }, [product?.slug]);
@@ -97,6 +101,7 @@ export default function QuickAdd() {
   const handleAddToCart = () => {
     if (!product) return;
     const power = lensType === "EYESIGHT" ? `L:${leftEye} R:${rightEye}` : null;
+    const selectedAddon = addons.find((a) => a.id === selectedAddonId) ?? null;
 
     // Add qty copies (addItem increments by 1 each call)
     for (let i = 0; i < qty; i++) {
@@ -109,8 +114,8 @@ export default function QuickAdd() {
         lensType,
         power,
         prescriptionName: prescriptionFile?.name ?? null,
-        addonName: "",
-        addonPrice: 0,
+        addonName: selectedAddon ? selectedAddon.name : "",
+        addonPrice: selectedAddon ? selectedAddon.extraCharge : 0,
         unitPrice: product.price,
       };
 
@@ -322,7 +327,9 @@ export default function QuickAdd() {
                     )}
                   </div>
 
-                  {/* ── Lens Type ── */}
+                  {product?.productType !== "GLASSES" && (
+                    <>
+                    {/* ── Lens Type ── */}
                   <div style={{ marginBottom: 16 }}>
                     <div
                       style={{
@@ -727,6 +734,62 @@ export default function QuickAdd() {
                     </div>
                   </div>
 
+                  {/* ── Aftercare Addons ── */}
+                  <div style={{ marginBottom: 16 }}>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: "#333",
+                        marginBottom: 8,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      Aftercare Solution <span style={{ color: "#e53e3e" }}>*</span>
+                    </div>
+                    {addons.length === 0 ? (
+                      <div style={{ fontSize: 13, color: "#888", fontStyle: "italic" }}>
+                        No aftercare solutions available.
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 14 }}>
+                          <input
+                            type="radio"
+                            name="qa-aftercare"
+                            checked={selectedAddonId === "none"}
+                            onChange={() => setSelectedAddonId("none")}
+                            style={{ accentColor: "var(--primary, #0d1b4b)", width: 15, height: 15, cursor: "pointer" }}
+                          />
+                          <span style={{ fontWeight: 600, color: "#333" }}>None</span>
+                        </label>
+                        {addons.map((a) => (
+                          <label key={a.id} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 14 }}>
+                            <input
+                              type="radio"
+                              name="qa-aftercare"
+                              checked={selectedAddonId === a.id}
+                              onChange={() => setSelectedAddonId(a.id)}
+                              style={{ accentColor: "var(--primary, #0d1b4b)", width: 15, height: 15, cursor: "pointer" }}
+                            />
+                            <span style={{ fontWeight: 600, color: "#333" }}>
+                              {a.name}
+                              <span style={{ color: "#999", textDecoration: "line-through", fontSize: 13, marginLeft: 6 }}>
+                                Rs{a.retailPrice}
+                              </span>
+                              <span style={{ fontWeight: 700, color: "#222", fontSize: 13, marginLeft: 5 }}>
+                                [+Rs{a.extraCharge}]
+                              </span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  </>
+                  )}
+
                   {/* Quantity */}
                   <div className="tf-product-info-quantity">
                     <div className="quantity-title fw-6">Quantity</div>
@@ -757,12 +820,13 @@ export default function QuickAdd() {
                       >
                         <span>Add to cart -&nbsp;</span>
                         <span className="tf-qty-price">
-                          Rs
-                          {product
-                            ? Number(product.price * qty).toLocaleString(
-                                "en-PK",
-                              )
-                            : "—"}
+                          {(() => {
+                            const addon = addons.find((a) => a.id === selectedAddonId);
+                            const addonPrice = addon ? addon.extraCharge : 0;
+                            return product
+                              ? `Rs${((product.price + addonPrice) * qty).toLocaleString("en-PK")}`
+                              : "—";
+                          })()}
                         </span>
                       </button>
                       <a

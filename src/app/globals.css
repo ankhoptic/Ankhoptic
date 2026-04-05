@@ -95,3 +95,56 @@ a {
 .swiper:not(.swiper-initialized) .swiper-slide:first-child {
   visibility: visible;
 }
+
+/* ─── Skeleton Loading (reusable for product grids) ─── */
+.products-skeleton {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+}
+@media (max-width: 480px) {
+  .products-skeleton {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+.skeleton-card {
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #eee;
+}
+.skeleton-img {
+  aspect-ratio: 1;
+  background: #f0f0f0;
+}
+.skeleton-body {
+  padding: 14px;
+}
+.skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  margin-bottom: 8px;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* -- Product Page: Sticky right info panel (tablet + desktop only) -- */
+@media (min-width: 768px) {
+  .product-info-sticky {
+    position: sticky;
+    top: 20px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    scrollbar-width: none;
+    align-self: flex-start;
+  }
+  .product-info-sticky::-webkit-scrollbar {
+    display: none;
+  }
+}

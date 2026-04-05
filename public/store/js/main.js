@@ -959,6 +959,7 @@ var totalVariant = function () {
     staggerWrap();
     clickModalSecond();
     scrollProgress();
+    // headerSticky();
     headerSticky();
     scrollBottomSticky();
     totalPriceVariant();

@@ -43,6 +43,11 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
 
+    // Type corrections logic similar to POST if needed, but for now just handle what's needed:
+    if (body.enableAddons !== undefined) {
+      body.enableAddons = Boolean(body.enableAddons);
+    }
+    
     // Enforce inStock = true as requested
     body.inStock = true;
 

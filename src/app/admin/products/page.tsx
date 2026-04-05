@@ -115,9 +115,6 @@ function ProductsPageContent() {
     <Box bg={T.bg} minH="100%" p={{ base: 4, md: 6 }}>
       <PageHeader title="Products" subtitle={`${total} products total`}>
         <AdminButton variant="secondary">Export</AdminButton>
-        {/* <NextLink href="/admin/products/bulk-upload">
-          <AdminButton variant="secondary">Bulk Upload</AdminButton>
-        </NextLink> */}
         <NextLink href="/admin/products/new">
           <AdminButton variant="primary">Add product</AdminButton>
         </NextLink>

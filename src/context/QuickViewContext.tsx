@@ -12,6 +12,7 @@ export type QuickViewProduct = {
   disposability: string | null;
   description: string | null;
   brand: { name: string; slug: string } | null;
+  productType?: "LENS" | "GLASSES" | "ACCESSORY";
 };
 
 type QuickViewCtx = {
