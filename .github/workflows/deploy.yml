@@ -1,0 +1,45 @@
+name: Deploy to AWS Lightsail
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ${{ secrets.LIGHTSAIL_USER }}
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          script: |
+            set -e
+
+            echo "==> Navigating to app directory"
+            cd /var/www/ankhoptics
+
+            echo "==> Pulling latest code"
+            git pull origin main
+
+            echo "==> Installing dependencies"
+            npm ci --production=false
+
+            echo "==> Running Prisma migrations"
+            npx prisma migrate deploy
+
+            echo "==> Building Next.js app"
+            npm run build
+
+            echo "==> Restarting app with PM2"
+            pm2 restart ankhoptics || pm2 start npm --name "ankhoptics" -- start
+
+            echo "==> Deployment complete!"
